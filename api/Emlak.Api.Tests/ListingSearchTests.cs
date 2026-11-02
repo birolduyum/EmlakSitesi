@@ -272,4 +272,40 @@ public class ListingSearchTests : IClassFixture<ApiFactory>
         Assert.Contains(">= 3900000", sql);
         Assert.Contains("<= 4100000", sql);
     }
+
+    public static TheoryData<string, Action<Listing>, ListingQuery> FilterCases => new()
+    {
+        { "Rooms", l => l.Rooms = "2+1", new() { Rooms = ["2+1", "4+1"] } },
+        { "Floor", l => l.Floor = 7, new() { Floor = 7 } },
+        { "MaxBuildingAge", l => l.BuildingAge = 1, new() { MaxBuildingAge = 2 } },
+        { "MinM2 (sınır dahil)", l => l.GrossM2 = 200, new() { MinM2 = 200 } },
+        { "MaxM2 (sınır dahil)", l => l.GrossM2 = 50, new() { MaxM2 = 50 } },
+        { "Heating", l => l.Heating = HeatingType.Dogalgaz, new() { Heating = HeatingType.Dogalgaz } },
+        { "Furnishing", l => l.Furnishing = FurnishingStatus.Esyali, new() { Furnishing = FurnishingStatus.Esyali } },
+        { "Balcony", l => l.Balcony = true, new() { Balcony = true } },
+        { "Elevator", l => l.Elevator = true, new() { Elevator = true } },
+        { "Parking", l => l.Parking = true, new() { Parking = true } },
+        { "InSite", l => l.InSite = true, new() { InSite = true } },
+        { "LoanEligible", l => l.LoanEligible = true, new() { LoanEligible = true } },
+        { "Swap", l => l.Swap = true, new() { Swap = true } },
+        { "Neighborhood", l => l.Neighborhood = "Moda", new() { Neighborhood = "Moda" } },
+        { "MinPriceTry (sınır dahil)", l => l.Price = 2_000_000m, new() { MinPriceTry = 2_000_000m } },
+    };
+
+    /// <summary>Varsayılan ilan eşleşmez; yalnızca ilgili alanı değiştirilmiş ilan, ilgili süzgeçle gelir.</summary>
+    [Theory]
+    [MemberData(nameof(FilterCases))]
+    public async Task SingleFilter_ReturnsOnlyTheMatchingListing(string name, Action<Listing> makeMatch, ListingQuery query)
+    {
+        await using var scope = await FreshScopeAsync();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var match = new ListingBuilder().Titled("eslesen").Build();
+        makeMatch(match);
+        await SeedAsync(db, match, new ListingBuilder().Titled("varsayilan").Build());
+
+        var (items, total) = await Svc(scope).SearchAsync(query, false, default);
+
+        Assert.True(items.Select(i => i.Title).SequenceEqual(["eslesen"]), $"{name}: {string.Join(",", items.Select(i => i.Title))}");
+        Assert.Equal(1, total);
+    }
 }

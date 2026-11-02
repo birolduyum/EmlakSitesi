@@ -18,6 +18,7 @@ app.UseAuthorization();
 
 app.MapGet("/health", () => "ok");
 app.MapAuthEndpoints();
+app.MapPublicListingEndpoints();
 
 if (app.Environment.IsEnvironment("Testing"))
 {

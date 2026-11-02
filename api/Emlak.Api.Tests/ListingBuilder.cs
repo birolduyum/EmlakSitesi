@@ -47,7 +47,8 @@ public class ListingBuilder
         _l.City = city; _l.District = district; _l.Neighborhood = neighborhood; return this;
     }
     public ListingBuilder WithRooms(string rooms) { _l.Rooms = rooms; return this; }
-    public ListingBuilder WithOwner(string name, string phone) { _l.Owner = new Owner { Name = name, Phone = phone }; return this; }
+    public ListingBuilder WithOwner(string name, string phone, string? note = null) { _l.Owner = new Owner { Name = name, Phone = phone, Note = note }; return this; }
+    public ListingBuilder WithTags(params FeatureTag[] tags) { _l.Tags = tags.ToList(); return this; }
     public ListingBuilder CreatedAt(DateTime utc) { _l.CreatedAt = utc; return this; }
     public ListingBuilder Deleted() { _l.IsDeleted = true; _l.DeletedAt = DateTime.UtcNow; _l.DeletedBy = "admin1"; return this; }
     public ListingBuilder WithPhotos(params string[] paths)
