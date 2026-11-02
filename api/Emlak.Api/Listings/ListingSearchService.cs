@@ -88,7 +88,9 @@ public class ListingSearchService(AppDbContext db)
     private static IQueryable<Listing> ApplyFilters(
         IQueryable<Listing> src, ListingQuery q, bool includeOwnerSearch, Expression<Func<Listing, decimal>> priceTry)
     {
-        var query = src.Where(l => l.Type == q.Type);
+        // Type == null: tür filtresi yok. Bu durumda fiyat aralığı satılık ve kiralık fiyatlarını karıştırır; sorumluluk yöneticidedir.
+        var query = src;
+        if (q.Type is { } type) { query = query.Where(l => l.Type == type); }
 
         query = q.Status switch
         {

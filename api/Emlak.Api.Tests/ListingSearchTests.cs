@@ -75,7 +75,7 @@ public class ListingSearchTests : IClassFixture<ApiFactory>
             new ListingBuilder().Titled("satilik").OfType(ListingType.Satilik).Priced(50_000m).Build(),
             new ListingBuilder().Titled("kiralik").OfType(ListingType.Kiralik).Priced(50_000m).Build());
 
-        var query = new ListingQuery { MinPriceTry = 40_000m, MaxPriceTry = 60_000m };
+        var query = new ListingQuery { Type = ListingType.Satilik, MinPriceTry = 40_000m, MaxPriceTry = 60_000m };
         var sale = await Svc(scope).SearchAsync(query, false, default);
         var rent = await Svc(scope).SearchAsync(query with { Type = ListingType.Kiralik }, false, default);
 

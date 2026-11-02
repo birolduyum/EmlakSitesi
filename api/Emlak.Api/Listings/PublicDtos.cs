@@ -40,7 +40,7 @@ public static class PublicMapper
 
     public static PublicTag ToTag(FeatureTag t) => new(t.Id, t.Name, t.Group);
 
-    private static string[] PhotoUrls(Listing l)
+    public static string[] PhotoUrls(Listing l)
         => l.Photos.OrderBy(p => p.SortOrder).ThenBy(p => p.Id)
             .Select(p => "/photos/" + p.FilePath.Replace('\\', '/').TrimStart('/'))
             .ToArray();

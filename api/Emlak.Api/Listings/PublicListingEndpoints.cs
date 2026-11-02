@@ -17,6 +17,7 @@ public static class PublicListingEndpoints
             // Ziyaretçi yalnızca aktif ilanı görür, sahip aramasını kullanamaz; sayfa sınırları serviste taşmadan önce kıstırılır.
             var safe = q with
             {
+                Type = q.Type ?? ListingType.Satilik,
                 Status = ListingStatus.Active,
                 OwnerText = null,
                 Page = Math.Clamp(q.Page, 1, MaxPage),
