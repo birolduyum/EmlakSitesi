@@ -2,6 +2,8 @@ using Emlak.Api.Auth;
 using Emlak.Api.Data;
 using Emlak.Api.Listings;
 using Emlak.Api.Photos;
+using Emlak.Api.Rates;
+using Emlak.Api.Showings;
 using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -37,6 +39,8 @@ app.MapAuthEndpoints();
 app.MapPublicListingEndpoints();
 app.MapAdminListingEndpoints();
 app.MapPhotoEndpoints();
+app.MapShowingEndpoints();
+app.MapRateEndpoints();
 
 if (app.Environment.IsEnvironment("Testing"))
 {
