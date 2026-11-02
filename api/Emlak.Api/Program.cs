@@ -1,10 +1,12 @@
 using Emlak.Api.Auth;
 using Emlak.Api.Data;
+using Emlak.Api.Listings;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddAppDatabase(builder.Configuration);
 builder.Services.AddAppAuth(builder.Configuration);
+builder.Services.AddListingSearch();
 
 var app = builder.Build();
 
