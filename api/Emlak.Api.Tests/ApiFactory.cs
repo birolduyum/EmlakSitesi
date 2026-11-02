@@ -22,6 +22,9 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     private readonly PostgreSqlContainer _db = new PostgreSqlBuilder("postgres:16")
         .Build();
 
+    /// <summary>Bu fabrikaya özel geçici fotoğraf kökü (Photos:Path); fabrika atılınca silinir.</summary>
+    public string PhotoRoot { get; } = Path.Combine(Path.GetTempPath(), "emlak-photos-" + Guid.NewGuid().ToString("N"));
+
     public async Task InitializeAsync() => await _db.StartAsync();
 
     Task IAsyncLifetime.DisposeAsync() => DisposeAsync().AsTask();
@@ -30,6 +33,14 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     {
         await _db.DisposeAsync();
         await base.DisposeAsync();
+        try
+        {
+            if (Directory.Exists(PhotoRoot)) { Directory.Delete(PhotoRoot, recursive: true); }
+        }
+        catch (IOException)
+        {
+            // Geçici klasör temizliği en iyi çabadır.
+        }
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -37,6 +48,7 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseEnvironment("Testing");
         builder.UseSetting("ConnectionStrings:Default", _db.GetConnectionString());
         builder.UseSetting("Jwt:Key", "test-only-signing-key-at-least-32-chars-long!!");
+        builder.UseSetting("Photos:Path", PhotoRoot);
         (string Name, string Role)[] users = [("admin1", "Admin"), ("admin2", "Admin"), ("saha1", "Field")];
         for (var i = 0; i < users.Length; i++)
         {
