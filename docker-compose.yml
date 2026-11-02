@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: emlak
+      POSTGRES_USER: emlak
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U emlak -d emlak"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__Default: Host=db;Database=emlak;Username=emlak;Password=${POSTGRES_PASSWORD}
+      Jwt__Key: ${JWT_KEY}
+      Users__0__Username: ${Users__0__Username}
+      Users__0__Password: ${Users__0__Password}
+      Users__0__Role: ${Users__0__Role}
+      Users__1__Username: ${Users__1__Username}
+      Users__1__Password: ${Users__1__Password}
+      Users__1__Role: ${Users__1__Role}
+      Users__2__Username: ${Users__2__Username}
+      Users__2__Password: ${Users__2__Password}
+      Users__2__Role: ${Users__2__Role}
+      Advisor__Name: ${Advisor__Name}
+      Advisor__Phone: ${Advisor__Phone}
+      Advisor__WhatsApp: ${Advisor__WhatsApp}
+      Photos__Path: /data/photos
+    volumes:
+      - photos:/data/photos
+    ports:
+      - "8080:8080"
+
+  # web servisi Task 15'te eklenir
+
+volumes:
+  dbdata:
+  photos:
