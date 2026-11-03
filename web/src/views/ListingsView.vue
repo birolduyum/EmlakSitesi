@@ -44,14 +44,18 @@ async function load() {
   }
 }
 
+// Sunucu sırası (ordinal) Türkçe harfleri sona atar (Çankaya, Şişli...); görüntüde Türkçe sıra kullanılır.
+const byTr = (a, b) => a.localeCompare(b, 'tr')
+const sortedTr = (list) => [...(list ?? [])].sort(byTr)
+
 async function loadFilters(type) {
   const id = ++filtersRequest
   try {
     const data = await api.get('/api/listings/filters', { type })
     if (id !== filtersRequest) return
     filters.value = {
-      cities: data?.cities ?? [],
-      districtsByCity: data?.districtsByCity ?? {},
+      cities: sortedTr(data?.cities),
+      districtsByCity: Object.fromEntries(Object.entries(data?.districtsByCity ?? {}).map(([city, list]) => [city, sortedTr(list)])),
       roomCounts: data?.roomCounts ?? {}
     }
   } catch {

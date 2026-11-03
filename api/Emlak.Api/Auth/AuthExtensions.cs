@@ -14,16 +14,14 @@ public static class AuthExtensions
     public static SymmetricSecurityKey GetSigningKey(IConfiguration config)
     {
         var key = config["Jwt:Key"];
-        if (string.IsNullOrEmpty(key) || key.Length < 32)
-        {
-            throw new InvalidOperationException("Jwt:Key ayarlı değil ya da 32 karakterden kısa.");
-        }
-        return new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
+        SecretGuard.ValidateJwtKey(key);
+        return new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key!));
     }
 
     public static IServiceCollection AddAppAuth(this IServiceCollection services, IConfiguration config)
     {
         var signingKey = GetSigningKey(config);
+        UserSeeder.ReadConfiguredUsers(config); // örnek parola / geçersiz rol varsa veritabanına dokunmadan erken başarısız ol
 
         services.AddSingleton<IPasswordHasher<AppUser>, PasswordHasher<AppUser>>();
         services.AddSingleton<JwtTokenService>();

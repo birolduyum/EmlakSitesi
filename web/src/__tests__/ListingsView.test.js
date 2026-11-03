@@ -12,11 +12,13 @@ const row = (id, over = {}) => ({
   district: 'Çankaya', rooms: '2+1', grossM2: 90, floor: 1, createdAt: new Date(2026, 7, 23, 12).toISOString(), photoUrls: [],
   ...over
 })
-const filtersBody = { cities: ['Ankara'], districtsByCity: { Ankara: ['Çankaya'] }, roomCounts: { '2+1': 3 } }
+let filtersBody
+const defaultFilters = () => ({ cities: ['Ankara'], districtsByCity: { Ankara: ['Çankaya'] }, roomCounts: { '2+1': 3 } })
 
 let listingsImpl
 beforeEach(() => {
   resetSiteInfo()
+  filtersBody = defaultFilters()
   api.get.mockReset()
   listingsImpl = async () => ({ items: [row(1), row(2)], total: 1234, page: 1, pageSize: 20 })
   api.get.mockImplementation((path, params) => {
@@ -53,6 +55,16 @@ describe('ListingsView', () => {
     expect(w.findAll('article')).toHaveLength(2)
     expect(w.find('article h2 a').attributes('href')).toBe('/ilan/1')
     expect(w.find('nav[aria-label="Sayfa yolu"]').text()).toContain('Satılık Daire')
+  })
+  it('sorts_cities_and_districts_in_Turkish_order', async () => {
+    filtersBody.cities = ['Ankara', 'Zonguldak', 'Çanakkale', 'İzmir', 'Şanlıurfa', 'Isparta']
+    filtersBody.districtsByCity = { Ankara: ['Yenimahalle', 'Çankaya', 'Altındağ', 'Şereflikoçhisar', 'Keçiören'] }
+    const { w } = await make('/?city=Ankara')
+    const options = (name) => w.findAll(`select[name="${name}"] option`).map((o) => o.text()).slice(1)
+    expect(options('city')).toEqual(['Ankara', 'Çanakkale', 'Isparta', 'İzmir', 'Şanlıurfa', 'Zonguldak'])
+    expect(options('district')).toEqual(['Altındağ', 'Çankaya', 'Keçiören', 'Şereflikoçhisar', 'Yenimahalle'])
+    // oda sayıları değişmeden gelir
+    expect(w.findAll('[data-testid="room"]').map((r) => r.text())).toEqual(['2+1 (3)'])
   })
   it('reads the query from the URL (kiralik, page 3, filters)', async () => {
     const { w } = await make('/?type=Kiralik&page=3&rooms=2%2B1&balcony=true&minPriceTry=abc')

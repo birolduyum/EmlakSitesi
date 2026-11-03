@@ -10,10 +10,14 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddAppDatabase(builder.Configuration);
 builder.Services.AddAppAuth(builder.Configuration);
+builder.Services.AddLoginRateLimit(builder.Configuration);
 builder.Services.AddListingSearch();
 builder.Services.AddSingleton<PhotoStorage>();
 
 var app = builder.Build();
+
+// Gerçek istemci IP'si için ilk sırada (hız sınırı IP'ye göre bölümlenir).
+app.UseForwardedHeaders();
 
 app.Services.MigrateDatabase();
 await app.Services.SeedUsersAsync();
@@ -32,6 +36,7 @@ app.UseStaticFiles(new StaticFileOptions
     },
 });
 
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 

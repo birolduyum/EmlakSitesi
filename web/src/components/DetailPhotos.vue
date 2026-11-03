@@ -23,7 +23,7 @@ const count = computed(() => props.photos.length)
       type="button"
       data-testid="photo-button"
       class="cell"
-      :class="i === 0 ? 'big' : 'small'"
+      :class="i === 0 ? 'big' : ['small', `s${i}`]"
       :aria-label="`Fotoğrafı büyüt: ${p.index + 1} / ${count}`"
       @click="emit('open', p.index, $event.currentTarget)"
     >
@@ -34,6 +34,8 @@ const count = computed(() => props.photos.length)
 </template>
 
 <style scoped>
+/* 4 sütun x 2 satır; blok sabit oranlı olduğu için satırlar eşit yükseklikte kalır.
+   Büyük fotoğraf solda 2 sütun x 2 satır; küçükler sağda. Eksik fotoğrafta boşluk kalmaz. */
 .photo-block {
   position: relative;
   display: grid;
@@ -42,8 +44,8 @@ const count = computed(() => props.photos.length)
   overflow: hidden;
   border-radius: var(--radius);
   background: #eef2ef;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
 }
 .cell {
   position: relative;
@@ -64,39 +66,45 @@ const count = computed(() => props.photos.length)
 }
 .cell img,
 .empty {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
   height: 100%;
+  max-width: none;
   object-fit: cover;
 }
 .empty {
-  grid-column: 1 / -1;
-  grid-row: 1 / -1;
   object-fit: contain;
 }
 .big {
-  grid-column: 1;
+  grid-column: 1 / span 2;
   grid-row: 1 / span 2;
 }
-/* Az fotoğraf: boş kutu bırakma. */
+/* 1 fotoğraf: tüm blok. */
 .n-1 .big {
   grid-column: 1 / -1;
 }
-.n-2 .big {
-  grid-column: 1;
-}
-.n-2 .small {
-  grid-column: 2;
+/* 2 fotoğraf: sağda iki satırı kaplayan tek hücre. */
+.n-2 .s1 {
+  grid-column: 3 / span 2;
   grid-row: 1 / span 2;
 }
-.n-3 .small:nth-of-type(2) {
-  grid-column: 2;
+/* 3 fotoğraf: sağda alt alta iki hücre. */
+.n-3 .s1 {
+  grid-column: 3 / span 2;
   grid-row: 1;
 }
-.n-3 .small:nth-of-type(3) {
-  grid-column: 2;
+.n-3 .s2 {
+  grid-column: 3 / span 2;
   grid-row: 2;
 }
+/* 4 fotoğraf: üstte geniş bir hücre, altta iki hücre. */
+.n-4 .s1 {
+  grid-column: 3 / span 2;
+  grid-row: 1;
+}
+/* 5 fotoğraf: 2x2 (otomatik yerleşim). */
 .all {
   position: absolute;
   right: 12px;
@@ -112,14 +120,13 @@ const count = computed(() => props.photos.length)
 @media (max-width: 900px) {
   .photo-block {
     aspect-ratio: 4 / 3;
-    grid-template-columns: 1fr;
-    grid-template-rows: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
   }
   .small {
     display: none;
   }
   .big,
-  .n-2 .big,
   .n-1 .big {
     grid-column: 1;
     grid-row: 1;

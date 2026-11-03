@@ -35,3 +35,45 @@ export function parseDecimal(value) {
   const n = Number(`${integerPart || '0'}${fraction ? `.${fraction}` : ''}`)
   return Number.isFinite(n) ? n : null
 }
+
+// ---- Türkçe para/sayı kuralı (ilan formu, filtreler) ----
+// Burada nokta YALNIZCA binlik ayırıcıdır, virgül ondalık ayırıcıdır: "5.000.000" → 5000000, "1.250" → 1250,
+// "1.250,50" → 1250.5, "1,5" → 1.5. (Yukarıdaki parseDecimal kur ekranı içindir ve "son ayırıcı ondalıktır" kuralını korur.)
+// Geçersiz, boş, eksi işaretli (allowNegative olmadıkça) ya da yanlış gruplanmış ("1.25", "12.34.567") girdi → null.
+const TR_INTEGER = /^(?:\d{1,3}(?:\.\d{3})+|\d+)$/
+const TR_DECIMAL = /^(?:\d{1,3}(?:\.\d{3})+|\d+)(?:,\d+)?$/
+
+function parseTr(value, pattern, { allowNegative = false, integer = false } = {}) {
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value) || (integer && !Number.isInteger(value))) return null
+    return value >= 0 || allowNegative ? value : null
+  }
+  if (typeof value !== 'string') return null
+  let s = value.trim()
+  let negative = false
+  if (allowNegative && s.startsWith('-')) {
+    negative = true
+    s = s.slice(1)
+  }
+  if (!pattern.test(s)) return null
+  const n = Number(s.replace(/\./g, '').replace(',', '.'))
+  if (!Number.isFinite(n) || Math.abs(n) > Number.MAX_SAFE_INTEGER) return null
+  return negative ? -n : n
+}
+
+export function parseTrInteger(value, options) {
+  return parseTr(value, TR_INTEGER, { ...options, integer: true })
+}
+
+export function parseTrDecimal(value, options) {
+  return parseTr(value, TR_DECIMAL, options)
+}
+
+// Sayıyı yazı kutusuna konacak biçime çevirir (binliksiz, virgüllü ondalık): 1250.5 → "1250,5".
+export function toTrInput(value) {
+  if (value === null || value === undefined || value === '') return ''
+  const n = Number(value)
+  return Number.isFinite(n) ? String(n).replace('.', ',') : String(value)
+}
+
+export const INVALID_NUMBER_MESSAGE = 'Geçerli bir sayı girin'

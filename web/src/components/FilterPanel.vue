@@ -1,6 +1,6 @@
 <script setup>
 import { reactive, computed, watch, onBeforeUnmount } from 'vue'
-import { parseNumber } from '../query.js'
+import { parseTrDecimal, parseTrInteger, INVALID_NUMBER_MESSAGE } from '../numbers.js'
 import { heatingLabels, furnishingLabels, typeLabels } from '../labels.js'
 
 const props = defineProps({
@@ -21,7 +21,17 @@ const TYPED = [
   ['minM2', 'integer'],
   ['maxM2', 'integer'],
   ['maxBuildingAge', 'integer'],
-  ['floor', 'integer']
+  ['floor', 'integer'],
+  ['minTotalFloors', 'integer'],
+  ['maxTotalFloors', 'integer']
+]
+
+const BATHROOMS = [
+  ['', 'Tümü'],
+  ['1', '1+'],
+  ['2', '2+'],
+  ['3', '3+'],
+  ['4', '4+']
 ]
 
 const FEATURES = [
@@ -45,7 +55,11 @@ function parseTyped(raw, kind) {
     const s = String(raw ?? '').trim()
     return s === '' ? undefined : s
   }
-  return parseNumber(raw, { integer: kind === 'integer' })
+  // Türkçe yazım: nokta binlik, virgül ondalık ("5.000.000" → 5000000). Boş değer "yok" demektir (undefined).
+  const s = String(raw ?? '').trim()
+  if (s === '') return undefined
+  const n = kind === 'integer' ? parseTrInteger(s) : parseTrDecimal(s)
+  return n === null ? undefined : n
 }
 
 function draftFrom(model) {
@@ -55,6 +69,10 @@ function draftFrom(model) {
 }
 
 const draft = reactive(draftFrom(props.modelValue))
+
+// Dolu ama sayı olarak okunamayan alanlar süzgece girmez; sessizce yutulmasın diye satır içi uyarı gösterilir.
+const KINDS = Object.fromEntries(TYPED)
+const invalid = (key) => String(draft[key] ?? '').trim() !== '' && parseTyped(draft[key], KINDS[key]) === undefined
 
 // Adres çubuğu / geri tuşu değeri değiştirince taslakları eşitle (kullanıcı yazarken ezme).
 watch(
@@ -115,6 +133,10 @@ function onCity(event) {
 }
 function onSelect(key, event) {
   emitWith({ [key]: event.target.value || undefined })
+}
+function onBathrooms(event) {
+  const n = Number(event.target.value)
+  emitWith({ minBathrooms: Number.isInteger(n) && n > 0 ? n : undefined })
 }
 function onFeature(key, event) {
   emitWith({ [key]: event.target.checked ? true : undefined })
@@ -207,11 +229,13 @@ const roomOptions = computed(() =>
       <div class="pair">
         <label class="field">
           <span>En Az</span>
-          <input type="number" name="minPriceTry" min="0" inputmode="numeric" :value="draft.minPriceTry" @input="onTyped('minPriceTry', $event)" />
+          <input type="text" name="minPriceTry" inputmode="decimal" autocomplete="off" :value="draft.minPriceTry" :aria-invalid="invalid('minPriceTry') ? 'true' : undefined" @input="onTyped('minPriceTry', $event)" />
+          <small v-if="invalid('minPriceTry')" class="err" role="alert">{{ INVALID_NUMBER_MESSAGE }}</small>
         </label>
         <label class="field">
           <span>En Fazla</span>
-          <input type="number" name="maxPriceTry" min="0" inputmode="numeric" :value="draft.maxPriceTry" @input="onTyped('maxPriceTry', $event)" />
+          <input type="text" name="maxPriceTry" inputmode="decimal" autocomplete="off" :value="draft.maxPriceTry" :aria-invalid="invalid('maxPriceTry') ? 'true' : undefined" @input="onTyped('maxPriceTry', $event)" />
+          <small v-if="invalid('maxPriceTry')" class="err" role="alert">{{ INVALID_NUMBER_MESSAGE }}</small>
         </label>
       </div>
     </fieldset>
@@ -237,11 +261,29 @@ const roomOptions = computed(() =>
       <div class="pair">
         <label class="field">
           <span>En Az</span>
-          <input type="number" name="minM2" min="0" inputmode="numeric" :value="draft.minM2" @input="onTyped('minM2', $event)" />
+          <input type="text" name="minM2" inputmode="numeric" autocomplete="off" :value="draft.minM2" :aria-invalid="invalid('minM2') ? 'true' : undefined" @input="onTyped('minM2', $event)" />
+          <small v-if="invalid('minM2')" class="err" role="alert">{{ INVALID_NUMBER_MESSAGE }}</small>
         </label>
         <label class="field">
           <span>En Fazla</span>
-          <input type="number" name="maxM2" min="0" inputmode="numeric" :value="draft.maxM2" @input="onTyped('maxM2', $event)" />
+          <input type="text" name="maxM2" inputmode="numeric" autocomplete="off" :value="draft.maxM2" :aria-invalid="invalid('maxM2') ? 'true' : undefined" @input="onTyped('maxM2', $event)" />
+          <small v-if="invalid('maxM2')" class="err" role="alert">{{ INVALID_NUMBER_MESSAGE }}</small>
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset class="group">
+      <legend>Binanın kat sayısı</legend>
+      <div class="pair">
+        <label class="field">
+          <span>En Az</span>
+          <input type="text" name="minTotalFloors" inputmode="numeric" autocomplete="off" :value="draft.minTotalFloors" :aria-invalid="invalid('minTotalFloors') ? 'true' : undefined" @input="onTyped('minTotalFloors', $event)" />
+          <small v-if="invalid('minTotalFloors')" class="err" role="alert">{{ INVALID_NUMBER_MESSAGE }}</small>
+        </label>
+        <label class="field">
+          <span>En Çok</span>
+          <input type="text" name="maxTotalFloors" inputmode="numeric" autocomplete="off" :value="draft.maxTotalFloors" :aria-invalid="invalid('maxTotalFloors') ? 'true' : undefined" @input="onTyped('maxTotalFloors', $event)" />
+          <small v-if="invalid('maxTotalFloors')" class="err" role="alert">{{ INVALID_NUMBER_MESSAGE }}</small>
         </label>
       </div>
     </fieldset>
@@ -249,11 +291,19 @@ const roomOptions = computed(() =>
     <div class="group">
       <label class="field">
         <span>Binanın yaşı (en fazla)</span>
-        <input type="number" name="maxBuildingAge" min="0" inputmode="numeric" :value="draft.maxBuildingAge" @input="onTyped('maxBuildingAge', $event)" />
+        <input type="text" name="maxBuildingAge" inputmode="numeric" autocomplete="off" :value="draft.maxBuildingAge" :aria-invalid="invalid('maxBuildingAge') ? 'true' : undefined" @input="onTyped('maxBuildingAge', $event)" />
+          <small v-if="invalid('maxBuildingAge')" class="err" role="alert">{{ INVALID_NUMBER_MESSAGE }}</small>
       </label>
       <label class="field">
         <span>Bulunduğu kat</span>
-        <input type="number" name="floor" min="0" inputmode="numeric" :value="draft.floor" @input="onTyped('floor', $event)" />
+        <input type="text" name="floor" inputmode="numeric" autocomplete="off" :value="draft.floor" :aria-invalid="invalid('floor') ? 'true' : undefined" @input="onTyped('floor', $event)" />
+          <small v-if="invalid('floor')" class="err" role="alert">{{ INVALID_NUMBER_MESSAGE }}</small>
+      </label>
+      <label class="field">
+        <span>Banyo sayısı</span>
+        <select name="minBathrooms" :value="modelValue.minBathrooms === undefined ? '' : String(modelValue.minBathrooms)" @change="onBathrooms">
+          <option v-for="[value, label] in BATHROOMS" :key="value" :value="value">{{ label }}</option>
+        </select>
       </label>
       <label class="field">
         <span>Isıtma</span>
@@ -392,6 +442,10 @@ select:focus-visible {
 select:disabled {
   background: #f3f4f6;
   cursor: not-allowed;
+}
+.err {
+  color: var(--danger, #b91c1c);
+  font-size: 0.8125rem;
 }
 .clear {
   align-self: stretch;

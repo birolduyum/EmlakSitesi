@@ -5,12 +5,15 @@ import { isAdmin } from '../../auth.js'
 import { formatDateTime } from '../../format.js'
 import { parseDecimal } from '../../numbers.js'
 import { errorMessage, useAsyncAction } from '../../composables/useAsyncAction.js'
-import FormField from '../../components/admin/FormField.vue'
 import '../../components/admin/adminForm.css'
 
 const MAX_RATE = 1000000
 
 const admin = isAdmin()
+const currencies = [
+  { key: 'usd', symbol: '$' },
+  { key: 'eur', symbol: '€' }
+]
 
 const state = ref('loading') // loading | ready | error
 const original = ref({ usd: null, eur: null }) // sunucudaki değerler (sayı)
@@ -116,30 +119,24 @@ const updatedText = (m) => (m ? `Son güncelleme: ${formatDateTime(m.updatedAt)}
     </div>
 
     <form v-else class="af-section" novalidate @submit.prevent="save">
-      <div class="rate">
-        <FormField name="usd" label="1 $ = ? ₺" :error="fieldErrors.usd">
-          <template #default="{ attrs }">
-            <div class="eq">
-              <span aria-hidden="true">1 $ =</span>
-              <input v-bind="attrs" v-model="draft.usd" type="text" inputmode="decimal" autocomplete="off" />
-              <span aria-hidden="true">₺</span>
-            </div>
-          </template>
-        </FormField>
-        <p class="updated">{{ updatedText(meta.usd) }}</p>
-      </div>
-
-      <div class="rate">
-        <FormField name="eur" label="1 € = ? ₺" :error="fieldErrors.eur">
-          <template #default="{ attrs }">
-            <div class="eq">
-              <span aria-hidden="true">1 € =</span>
-              <input v-bind="attrs" v-model="draft.eur" type="text" inputmode="decimal" autocomplete="off" />
-              <span aria-hidden="true">₺</span>
-            </div>
-          </template>
-        </FormField>
-        <p class="updated">{{ updatedText(meta.eur) }}</p>
+      <div v-for="c in currencies" :key="c.key" class="rate">
+        <label class="af-sr" :for="`f-${c.key}`">1 {{ c.symbol }} = ? ₺</label>
+        <div class="eq">
+          <span class="eq-label" aria-hidden="true">1 {{ c.symbol }} =</span>
+          <input
+            :id="`f-${c.key}`"
+            v-model="draft[c.key]"
+            :name="c.key"
+            type="text"
+            inputmode="decimal"
+            autocomplete="off"
+            :aria-invalid="fieldErrors[c.key] ? 'true' : undefined"
+            :aria-describedby="fieldErrors[c.key] ? `f-${c.key}-err` : undefined"
+          />
+          <span class="eq-suffix" aria-hidden="true">₺</span>
+        </div>
+        <p v-if="fieldErrors[c.key]" :id="`f-${c.key}-err`" class="af-error">{{ fieldErrors[c.key] }}</p>
+        <p class="updated">{{ updatedText(meta[c.key]) }}</p>
       </div>
 
       <div v-if="serverErrors.length" class="af-error" role="alert">
@@ -170,12 +167,19 @@ h1 {
 }
 .eq {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.25rem 0.5rem;
+}
+.eq-label,
+.eq-suffix {
+  white-space: nowrap;
+  font-weight: 600;
+  color: var(--green-900);
 }
 .eq input {
-  flex: 1 1 auto;
-  min-width: 0;
+  width: 9rem;
+  max-width: 100%;
 }
 .updated {
   margin: 0.25rem 0 0;

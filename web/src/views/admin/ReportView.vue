@@ -29,6 +29,21 @@ function fromQuery(query) {
   return p
 }
 
+// Seçilen gün kullanıcının YEREL gününe göre kıstas olur: başlangıç yerel 00:00:00.000, bitiş yerel 23:59:59.999 (UTC anına çevrilir).
+// Adres çubuğunda yalnızca gün (yyyy-MM-dd) kalır; sunucuya saatli an gider (sunucu iki sınırı da dahil sayar).
+function localDayBounds(day, endOfDay) {
+  const [y, m, d] = day.split('-').map(Number)
+  const date = endOfDay ? new Date(y, m - 1, d, 23, 59, 59, 999) : new Date(y, m - 1, d, 0, 0, 0, 0)
+  return date.toISOString()
+}
+
+function toApiParams(p) {
+  const out = { ...p }
+  if (out.from) out.from = localDayBounds(out.from, false)
+  if (out.to) out.to = localDayBounds(out.to, true)
+  return out
+}
+
 function toQuery(p) {
   const q = {}
   for (const [k, v] of Object.entries(p)) q[k] = String(v)
@@ -54,6 +69,7 @@ function rangeError(p) {
 }
 
 async function load() {
+  if (!admin) return
   const id = ++requestId
   const p = params.value
   errors.value = { listingId: '', range: rangeError(p) }
@@ -66,7 +82,7 @@ async function load() {
   blocked.value = false
   state.value = 'loading'
   try {
-    const data = await api.get('/api/admin/showings', { ...p })
+    const data = await api.get('/api/admin/showings', toApiParams(p))
     if (id !== requestId) return // daha yeni bir istek başladı: bu cevap eski
     rows.value = Array.isArray(data) ? data : []
     state.value = 'ready'
@@ -156,6 +172,7 @@ const capped = computed(() => rows.value.length >= CAP)
           </template>
         </FormField>
       </div>
+      <p class="af-hint">Tarihler bulunduğunuz saat dilimine göre aranır.</p>
       <p v-if="errors.range" class="af-error range" role="alert">{{ errors.range }}</p>
       <div class="buttons">
         <button type="submit">Filtrele</button>

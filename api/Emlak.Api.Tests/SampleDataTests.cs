@@ -65,6 +65,48 @@ public class SampleDataTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task Seed_AssignsShowingsToFirstFieldUser_NotAHardCodedName()
+    {
+        _ = _factory.Server;
+        await _factory.ResetAsync();
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var sp = scope.ServiceProvider;
+        var db = sp.GetRequiredService<AppDbContext>();
+        (await db.Users.SingleAsync(u => u.Username == "saha1")).Username = "arazi-ekibi";
+        await db.SaveChangesAsync();
+
+        await SampleDataSeeder.SeedAsync(db, sp.GetRequiredService<PhotoStorage>());
+
+        Assert.Equal(3, await db.Showings.CountAsync());
+        Assert.All(await db.Showings.ToListAsync(), s => Assert.Equal("arazi-ekibi", s.Username));
+    }
+
+    [Fact]
+    public async Task Seed_WithoutFieldUser_UsesFirstAdmin_AndWithoutAnyUserAddsNoShowings()
+    {
+        _ = _factory.Server;
+        await _factory.ResetAsync();
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var sp = scope.ServiceProvider;
+        var db = sp.GetRequiredService<AppDbContext>();
+        db.Users.Remove(await db.Users.SingleAsync(u => u.Username == "saha1"));
+        await db.SaveChangesAsync();
+
+        await SampleDataSeeder.SeedAsync(db, sp.GetRequiredService<PhotoStorage>());
+        Assert.All(await db.Showings.ToListAsync(), s => Assert.Equal("admin1", s.Username));
+
+        await _factory.ResetAsync();
+        db.ChangeTracker.Clear();
+        db.Showings.RemoveRange(await db.Showings.ToListAsync());
+        db.Listings.RemoveRange(await db.Listings.ToListAsync());
+        db.Users.RemoveRange(await db.Users.ToListAsync());
+        await db.SaveChangesAsync();
+        await SampleDataSeeder.SeedAsync(db, sp.GetRequiredService<PhotoStorage>());
+        Assert.Equal(0, await db.Showings.CountAsync());
+        await _factory.ResetAsync();
+    }
+
+    [Fact]
     public async Task Seed_DoesNothing_WhenOnlyASoftDeletedListingExists()
     {
         _ = _factory.Server;

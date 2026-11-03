@@ -130,12 +130,18 @@ public static class SampleDataSeeder
             saved.Add(listing);
         }
 
-        // Gösterme kayıtları: silinmemiş ilanlarda, saha kullanıcısı adına (ikisi iade edilmiş, biri açık).
+        // Gösterme kayıtları: silinmemiş ilanlarda; ilk Saha kullanıcısı adına (yoksa ilk Yönetici). Kullanıcı yoksa kayıt eklenmez:
+        // var olmayan bir kullanıcıya ait açık kayıt bırakılmaz. Users tablosu örnek veriden önce tohumlanır.
+        var fieldUser = await db.Users.AsNoTracking().Where(u => u.Role == UserRole.Field).OrderBy(u => u.Id).Select(u => u.Username).FirstOrDefaultAsync(ct)
+            ?? await db.Users.AsNoTracking().Where(u => u.Role == UserRole.Admin).OrderBy(u => u.Id).Select(u => u.Username).FirstOrDefaultAsync(ct);
         var live = saved.Where(l => !l.IsDeleted).ToList();
-        db.Showings.AddRange(
-            new Showing { ListingId = live[0].Id, Username = "saha1", TakenAt = DateTime.UtcNow.AddDays(-1), ReturnedAt = DateTime.UtcNow.AddDays(-1).AddHours(2), Note = "Alıcı adayı daireyi beğendi, fiyatı soracak." },
-            new Showing { ListingId = live[2].Id, Username = "saha1", TakenAt = DateTime.UtcNow.AddDays(-4), ReturnedAt = DateTime.UtcNow.AddDays(-4).AddHours(1), Note = "Site yönetimi anahtar teslimini onayladı." },
-            new Showing { ListingId = live[4].Id, Username = "saha1", TakenAt = DateTime.UtcNow.AddHours(-3) });
+        if (fieldUser is not null)
+        {
+            db.Showings.AddRange(
+                new Showing { ListingId = live[0].Id, Username = fieldUser, TakenAt = DateTime.UtcNow.AddDays(-1), ReturnedAt = DateTime.UtcNow.AddDays(-1).AddHours(2), Note = "Alıcı adayı daireyi beğendi, fiyatı soracak." },
+                new Showing { ListingId = live[2].Id, Username = fieldUser, TakenAt = DateTime.UtcNow.AddDays(-4), ReturnedAt = DateTime.UtcNow.AddDays(-4).AddHours(1), Note = "Site yönetimi anahtar teslimini onayladı." },
+                new Showing { ListingId = live[4].Id, Username = fieldUser, TakenAt = DateTime.UtcNow.AddHours(-3) });
+        }
 
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);

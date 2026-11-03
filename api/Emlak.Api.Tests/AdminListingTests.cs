@@ -100,6 +100,60 @@ public class AdminListingTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task AdminDetail_IncludesShowingCount_FieldDetailToo()
+    {
+        await ResetAsync();
+        var l = await SeedAsync(Secret(new ListingBuilder()));
+        await WithDbAsync(async db =>
+        {
+            db.Showings.AddRange(
+                new Showing { ListingId = l.Id, Username = "saha1", TakenAt = DateTime.UtcNow },
+                new Showing { ListingId = l.Id, Username = "saha1", TakenAt = DateTime.UtcNow.AddDays(-1), ReturnedAt = DateTime.UtcNow });
+            await db.SaveChangesAsync();
+            return 0;
+        });
+        var admin = await _factory.LoginAsync("admin1");
+        var field = await _factory.LoginAsync("saha1");
+
+        var adminJson = await admin.GetFromJsonAsync<JsonElement>($"/api/admin/listings/{l.Id}");
+        var fieldJson = await field.GetFromJsonAsync<JsonElement>($"/api/admin/listings/{l.Id}");
+
+        Assert.Equal(2, adminJson.GetProperty("showingCount").GetInt32());
+        Assert.Equal(OwnerName, adminJson.GetProperty("owner").GetProperty("name").GetString());
+        Assert.Equal(2, fieldJson.GetProperty("showingCount").GetInt32());
+        Assert.False(fieldJson.TryGetProperty("owner", out _));
+    }
+
+    [Fact]
+    public async Task AdminList_NewFilters_AndOwnerOnlyForAdmin()
+    {
+        await ResetAsync();
+        await SeedAsync(Secret(new ListingBuilder().Titled("kucuk")));
+        var big = await SeedAsync(Secret(new ListingBuilder().Titled("buyuk")));
+        await WithDbAsync(async db =>
+        {
+            var row = await db.Listings.SingleAsync(x => x.Id == big.Id);
+            row.Bathrooms = 3; row.TotalFloors = 12;
+            await db.SaveChangesAsync();
+            return 0;
+        });
+        var admin = await _factory.LoginAsync("admin1");
+        var field = await _factory.LoginAsync("saha1");
+
+        var byBath = await admin.GetFromJsonAsync<JsonElement>("/api/admin/listings?minBathrooms=2");
+        var byMinFloors = await admin.GetFromJsonAsync<JsonElement>("/api/admin/listings?minTotalFloors=10");
+        var byMaxFloors = await admin.GetFromJsonAsync<JsonElement>("/api/admin/listings?maxTotalFloors=6");
+        var fieldList = await field.GetStringAsync("/api/admin/listings?minBathrooms=2");
+
+        Assert.Equal("buyuk", Assert.Single(byBath.GetProperty("items").EnumerateArray()).GetProperty("title").GetString());
+        Assert.Equal(OwnerName, byBath.GetProperty("items")[0].GetProperty("owner").GetProperty("name").GetString());
+        Assert.Equal(1, byMinFloors.GetProperty("total").GetInt32());
+        Assert.Equal("kucuk", Assert.Single(byMaxFloors.GetProperty("items").EnumerateArray()).GetProperty("title").GetString());
+        Assert.Contains("buyuk", fieldList);
+        Assert.DoesNotContain(OwnerName, fieldList);
+    }
+
+    [Fact]
     public async Task Create_AsField_Returns403()
     {
         await ResetAsync();

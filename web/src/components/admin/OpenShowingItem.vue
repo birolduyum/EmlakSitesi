@@ -11,7 +11,7 @@ const props = defineProps({
   record: { type: Object, required: true },
   admin: { type: Boolean, default: false }
 })
-const emit = defineEmits(['closed'])
+const emit = defineEmits(['closed', 'stale'])
 
 const note = ref('')
 const link = computed(() => (props.admin ? `/admin/ilan/${props.record.listingId}` : `/ilan/${props.record.listingId}`))
@@ -31,6 +31,7 @@ const closing = useAsyncAction(
 async function close() {
   const result = await closing.run()
   if (result?.ok) emit('closed', props.record)
+  else if (result?.error?.status === 409) emit('stale', props.record)
 }
 </script>
 

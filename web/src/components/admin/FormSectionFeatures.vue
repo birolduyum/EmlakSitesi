@@ -1,8 +1,9 @@
 <script setup>
 import FormField from './FormField.vue'
 import { heatingLabels, furnishingLabels, usageLabels, deedLabels, kitchenLabels } from '../../labels.js'
+import { parseTrInteger, INVALID_NUMBER_MESSAGE } from '../../numbers.js'
 
-defineProps({
+const props = defineProps({
   form: { type: Object, required: true },
   errors: { type: Object, default: () => ({}) }
 })
@@ -15,6 +16,14 @@ const NUMBERS = [
   ['totalFloors', 'Kat sayısı', 0],
   ['buildingAge', 'Bina yaşı', 0]
 ]
+const NEGATIVE_OK = new Set(['floor']) // bodrum katları
+
+// Gönderim/sunucu hatası ya da dolu ama okunamayan metin için satır içi hata (sessizce 0 sayılmaz).
+function error(key) {
+  if (props.errors[key]) return props.errors[key]
+  const raw = String(props.form[key] ?? '').trim()
+  return raw !== '' && parseTrInteger(raw, { allowNegative: NEGATIVE_OK.has(key) }) === null ? INVALID_NUMBER_MESSAGE : ''
+}
 const SELECTS = [
   ['heating', 'Isıtma', heatingLabels],
   ['furnishing', 'Eşya durumu', furnishingLabels],
@@ -39,8 +48,8 @@ const CHECKS = [
       <FormField v-slot="{ attrs }" name="rooms" label="Oda sayısı" hint="Örn. 3+1" required :error="errors.rooms">
         <input v-model="form.rooms" v-bind="attrs" type="text" maxlength="20" autocomplete="off" />
       </FormField>
-      <FormField v-for="[key, label, min] in NUMBERS" :key="key" v-slot="{ attrs }" :name="key" :label="label" :error="errors[key]">
-        <input v-model="form[key]" v-bind="attrs" type="number" :min="min" step="1" inputmode="numeric" />
+      <FormField v-for="[key, label] in NUMBERS" :key="key" v-slot="{ attrs }" :name="key" :label="label" :error="error(key)">
+        <input v-model="form[key]" v-bind="attrs" type="text" inputmode="numeric" autocomplete="off" />
       </FormField>
       <FormField v-for="[key, label, labels] in SELECTS" :key="key" v-slot="{ attrs }" :name="key" :label="label">
         <select v-model="form[key]" v-bind="attrs">

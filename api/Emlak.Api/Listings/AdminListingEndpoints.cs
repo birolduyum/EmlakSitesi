@@ -29,7 +29,7 @@ public static class AdminListingEndpoints
                 Page = Math.Clamp(q.Page, 1, MaxPage),
                 PageSize = Math.Clamp(q.PageSize, 1, MaxPageSize),
             };
-            var (items, total) = await search.SearchAsync(safe, includeOwnerSearch: isAdmin, ct);
+            var (items, total) = await search.SearchAsync(safe, includeOwnerSearch: isAdmin, ct, includeOwner: isAdmin);
 
             return isAdmin
                 ? Results.Ok(new PagedResult<AdminListingSummary>(items.Select(AdminMapper.ToSummary).ToList(), total, safe.Page, safe.PageSize))
@@ -39,7 +39,7 @@ public static class AdminListingEndpoints
         g.MapGet("/listings/{id:int}", async (int id, ClaimsPrincipal user, AppDbContext db, CancellationToken ct) =>
         {
             var isAdmin = IsAdmin(user);
-            var listing = await LoadAsync(db.Listings.AsNoTracking(), id, ct);
+            var listing = await LoadAsync(db.Listings.AsNoTracking(), id, includeOwner: isAdmin, ct);
             if (listing is null || (!isAdmin && listing.IsDeleted))
             {
                 return Results.NotFound();
@@ -73,7 +73,7 @@ public static class AdminListingEndpoints
             var errors = ListingValidator.Validate(input);
             if (errors.Length > 0) { return BadRequest(errors); }
 
-            var listing = await LoadAsync(db.Listings, id, ct);
+            var listing = await LoadAsync(db.Listings, id, includeOwner: true, ct);
             if (listing is null || listing.IsDeleted) { return Results.NotFound(); }
 
             var tags = await ResolveTagsAsync(db, input.TagIds, ct);
@@ -135,8 +135,8 @@ public static class AdminListingEndpoints
                 return BadRequest(["Etiket grubu geçersiz."]);
             }
 
-            var lower = name.ToLower();
-            if (await db.FeatureTags.AnyAsync(t => t.Group == group && t.Name.ToLower() == lower, ct))
+            var lower = name.ToLowerInvariant();
+            if (await db.FeatureTags.AnyAsync(t => t.Group == group && t.Name.ToLower() == lower, ct)) // SQL lower() olarak çevrilir; kültürden etkilenmez
             {
                 return Results.Conflict(new { error = "Bu grupta aynı adlı etiket zaten var." });
             }
@@ -156,9 +156,12 @@ public static class AdminListingEndpoints
 
     private static IResult BadRequest(string[] errors) => Results.BadRequest(new { errors });
 
-    private static Task<Listing?> LoadAsync(IQueryable<Listing> src, int id, CancellationToken ct)
-        => src.Include(l => l.Owner).Include(l => l.Photos).Include(l => l.Tags).AsSplitQuery()
-            .SingleOrDefaultAsync(l => l.Id == id, ct);
+    private static Task<Listing?> LoadAsync(IQueryable<Listing> src, int id, bool includeOwner, CancellationToken ct)
+    {
+        // Ev sahibi yalnızca yönetici için yüklenir (Saha cevabı onu hiç kullanmaz).
+        var query = includeOwner ? src.Include(l => l.Owner) : src;
+        return query.Include(l => l.Photos).Include(l => l.Tags).AsSplitQuery().SingleOrDefaultAsync(l => l.Id == id, ct);
+    }
 
     /// <summary>Verilen kimliklerin etiketleri; bilinmeyen kimlik varsa null.</summary>
     private static async Task<List<FeatureTag>?> ResolveTagsAsync(AppDbContext db, int[]? ids, CancellationToken ct)

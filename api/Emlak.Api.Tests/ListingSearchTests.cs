@@ -248,7 +248,7 @@ public class ListingSearchTests : IClassFixture<ApiFactory>
             new ListingBuilder().Titled("orta").CreatedAt(t.AddDays(-1)).WithPhotos("b.jpg", "c.jpg").Build(),
             new ListingBuilder().Titled("yeni").CreatedAt(t).Build());
 
-        var page1 = await Svc(scope).SearchAsync(new ListingQuery { PageSize = 2 }, false, default);
+        var page1 = await Svc(scope).SearchAsync(new ListingQuery { PageSize = 2 }, false, default, includeOwner: true);
         var page2 = await Svc(scope).SearchAsync(new ListingQuery { PageSize = 2, Page = 2 }, false, default);
 
         Assert.Equal(3, page1.Total);
@@ -289,6 +289,10 @@ public class ListingSearchTests : IClassFixture<ApiFactory>
         { "LoanEligible", l => l.LoanEligible = true, new() { LoanEligible = true } },
         { "Swap", l => l.Swap = true, new() { Swap = true } },
         { "Neighborhood", l => l.Neighborhood = "Moda", new() { Neighborhood = "Moda" } },
+        { "Neighborhood (büyük-küçük harfe duyarsız, içerir)", l => l.Neighborhood = "Moda Sahil", new() { Neighborhood = "moda" } },
+        { "MinBathrooms (sınır dahil)", l => l.Bathrooms = 3, new() { MinBathrooms = 3 } },
+        { "MinTotalFloors (sınır dahil)", l => l.TotalFloors = 12, new() { MinTotalFloors = 12 } },
+        { "MaxTotalFloors (sınır dahil)", l => l.TotalFloors = 2, new() { MaxTotalFloors = 2 } },
         { "MinPriceTry (sınır dahil)", l => l.Price = 2_000_000m, new() { MinPriceTry = 2_000_000m } },
     };
 
@@ -307,5 +311,56 @@ public class ListingSearchTests : IClassFixture<ApiFactory>
 
         Assert.True(items.Select(i => i.Title).SequenceEqual(["eslesen"]), $"{name}: {string.Join(",", items.Select(i => i.Title))}");
         Assert.Equal(1, total);
+    }
+
+    [Fact]
+    public async Task Neighborhood_IsCaseInsensitiveContains_ButNotAccentInsensitive()
+    {
+        await using var scope = await FreshScopeAsync();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await SeedAsync(db,
+            new ListingBuilder().Titled("bostanli").In("Izmir", "Karsiyaka", "Bostanlı").Build(),
+            new ListingBuilder().Titled("caddebostan").Build(),
+            new ListingBuilder().Titled("yuzde").In("Izmir", "Karsiyaka", "100% Yeni").Build(),
+            new ListingBuilder().Titled("alt-cizgi").In("Izmir", "Karsiyaka", "A_B").Build(),
+            new ListingBuilder().Titled("a-x-b").In("Izmir", "Karsiyaka", "AxB").Build());
+
+        async Task<string[]> Run(string neighborhood)
+            => Titles((await Svc(scope).SearchAsync(new ListingQuery { Neighborhood = neighborhood }, false, default)).Items);
+
+        Assert.Equal(["bostanli"], await Run("bostanlı"));    // küçük harf, aynı aksan
+        Assert.Equal(["bostanli"], await Run("  BOSTANLı "));  // karışık harf + kırpma
+        Assert.Equal(["bostanli", "caddebostan"], await Run("bostan")); // içerir
+        Assert.Empty(await Run("bostanli"));                   // aksan katlama yok (belgelenmiş sınırlama)
+        Assert.Equal(["yuzde"], await Run("%"));                // % joker değil
+        Assert.Equal(["alt-cizgi"], await Run("a_b"));          // _ joker değil (AxB gelmez)
+    }
+
+    [Fact]
+    public async Task Search_LoadsOwnerOnlyWhenRequested()
+    {
+        _ = _factory.Server;
+        await _factory.ResetAsync();
+        await using (var seed = _factory.Services.CreateAsyncScope())
+        {
+            await SeedAsync(seed.ServiceProvider.GetRequiredService<AppDbContext>(), new ListingBuilder().Titled("a").Build());
+        }
+
+        // Her çağrı temiz bir bağlamla çalışır: izlenen varlık Owner'ı başka yoldan yüklemiş olamaz.
+        await using (var withoutOwner = _factory.Services.CreateAsyncScope())
+        {
+            var db = withoutOwner.ServiceProvider.GetRequiredService<AppDbContext>();
+            var (items, _) = await new ListingSearchService(db).SearchAsync(new ListingQuery(), false, default);
+            var l = Assert.Single(items);
+            Assert.False(db.Entry(l).Reference(x => x.Owner).IsLoaded);
+            Assert.Null(l.Owner); // AsNoTracking: izlenmeyen varlıkta IsLoaded güvenilir değil, gezinme özelliği null kalmalı
+        }
+
+        await using (var withOwner = _factory.Services.CreateAsyncScope())
+        {
+            var db = withOwner.ServiceProvider.GetRequiredService<AppDbContext>();
+            var (items, _) = await new ListingSearchService(db).SearchAsync(new ListingQuery(), false, default, includeOwner: true);
+            Assert.NotNull(Assert.Single(items).Owner);
+        }
     }
 }

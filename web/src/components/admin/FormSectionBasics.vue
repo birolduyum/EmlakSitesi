@@ -1,11 +1,26 @@
 <script setup>
 import FormField from './FormField.vue'
 import { typeLabels, currencyLabels } from '../../labels.js'
+import { formatPrice } from '../../format.js'
+import { parseTrDecimal, INVALID_NUMBER_MESSAGE } from '../../numbers.js'
 
-defineProps({
+const props = defineProps({
   form: { type: Object, required: true },
   errors: { type: Object, default: () => ({}) }
 })
+
+// Yazılan tutarın yansıması: "1.250" yazıldıysa "= 1.250 ₺"; yanlış gruplama kullanıcıya hemen görünür. Boş/geçersizse gizli.
+function echo(key) {
+  const n = parseTrDecimal(props.form[key])
+  return n === null ? '' : `= ${formatPrice(n, props.form.currency)}`
+}
+
+// Sunucu/gönderim hatası ya da dolu ama okunamayan metin için satır içi hata.
+function error(key) {
+  if (props.errors[key]) return props.errors[key]
+  const raw = String(props.form[key] ?? '').trim()
+  return raw !== '' && parseTrDecimal(raw) === null ? INVALID_NUMBER_MESSAGE : ''
+}
 </script>
 
 <template>
@@ -35,8 +50,8 @@ defineProps({
           </label>
         </div>
       </fieldset>
-      <FormField v-slot="{ attrs }" name="price" label="Fiyat" required :error="errors.price">
-        <input v-model="form.price" v-bind="attrs" type="number" min="0" step="0.01" inputmode="decimal" />
+      <FormField v-slot="{ attrs }" name="price" label="Fiyat" required :error="error('price')" :echo="echo('price')">
+        <input v-model="form.price" v-bind="attrs" type="text" inputmode="decimal" autocomplete="off" />
       </FormField>
       <FormField v-slot="{ attrs }" name="currency" label="Para birimi">
         <select v-model="form.currency" v-bind="attrs">
@@ -44,11 +59,11 @@ defineProps({
         </select>
       </FormField>
       <template v-if="form.type === 'Kiralik'">
-        <FormField v-slot="{ attrs }" name="deposit" label="Depozito" :error="errors.deposit">
-          <input v-model="form.deposit" v-bind="attrs" type="number" min="0" step="0.01" inputmode="decimal" />
+        <FormField v-slot="{ attrs }" name="deposit" label="Depozito" :error="error('deposit')" :echo="echo('deposit')">
+          <input v-model="form.deposit" v-bind="attrs" type="text" inputmode="decimal" autocomplete="off" />
         </FormField>
-        <FormField v-slot="{ attrs }" name="aidat" label="Aidat (aylık)" :error="errors.aidat">
-          <input v-model="form.aidat" v-bind="attrs" type="number" min="0" step="0.01" inputmode="decimal" />
+        <FormField v-slot="{ attrs }" name="aidat" label="Aidat (aylık)" :error="error('aidat')" :echo="echo('aidat')">
+          <input v-model="form.aidat" v-bind="attrs" type="text" inputmode="decimal" autocomplete="off" />
         </FormField>
       </template>
     </div>

@@ -226,6 +226,7 @@ const audit = computed(() => {
   if (d.updatedBy) rows.push(line('Son güncelleyen', d.updatedBy, d.updatedAt))
   if (d.deletedBy) rows.push(line('Silen', d.deletedBy, d.deletedAt))
   if (d.restoredBy) rows.push(line('Geri alan', d.restoredBy, d.restoredAt))
+  if (d.showingCount > 0) rows.push(`Bu ilan ${d.showingCount} kez gösterildi`)
   return rows
 })
 

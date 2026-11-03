@@ -1,7 +1,9 @@
+# Görüntü sürümleri bilerek sabitlenmiştir (postgres, node ve nginx: web/Dockerfile). Yükseltmek için Docker Hub'da etiketin
+# var olduğunu doğrulayıp birlikte değiştirin. PostgreSQL'de yalnızca 16.x yama sürümleri arasında geçin (veri klasörü uyumlu kalır).
 services:
   db:
     restart: unless-stopped
-    image: postgres:16
+    image: postgres:16.15
     environment:
       POSTGRES_DB: emlak
       POSTGRES_USER: emlak
@@ -36,11 +38,14 @@ services:
       Advisor__Phone: ${Advisor__Phone}
       Advisor__WhatsApp: ${Advisor__WhatsApp}
       Seed__Sample: ${Seed__Sample:-true}
+      # Giriş denemesi sınırı (istemci IP'si başına dakikada); aşılırsa 429 döner.
+      RateLimit__LoginPerMinute: ${RateLimit__LoginPerMinute:-10}
       Photos__Path: /data/photos
     volumes:
       - photos:/data/photos
+    # API yalnızca bu makineden erişilebilir (loopback); web kapsayıcısı API'ye compose ağı üzerinden (api:8080) ulaşır.
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
 
   web:
     build: ./web

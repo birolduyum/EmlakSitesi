@@ -10,7 +10,8 @@ public class ListingSearchService(AppDbContext db)
 {
     private const int MaxPageSize = 100;
 
-    public async Task<(List<Listing> Items, int Total)> SearchAsync(ListingQuery q, bool includeOwnerSearch, CancellationToken ct)
+    public async Task<(List<Listing> Items, int Total)> SearchAsync(
+        ListingQuery q, bool includeOwnerSearch, CancellationToken ct, bool includeOwner = false)
     {
         var (usd, eur) = await ReadRatesAsync(ct);
         var priceTry = PriceTry(usd, eur);
@@ -26,10 +27,10 @@ public class ListingSearchService(AppDbContext db)
 
         var pageSize = Math.Clamp(q.PageSize, 1, MaxPageSize);
         var page = Math.Max(q.Page, 1);
-        var items = await ordered
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .Include(l => l.Owner)
+        var paged = ordered.Skip((page - 1) * pageSize).Take(pageSize);
+        // Ev sahibi yalnızca yönetici cevabı için yüklenir; ziyaretçi/saha yolunda hiç okunmaz.
+        if (includeOwner) { paged = paged.Include(l => l.Owner); }
+        var items = await paged
             .Include(l => l.Photos.OrderBy(p => p.SortOrder))
             .AsSplitQuery()
             .ToListAsync(ct);
@@ -88,6 +89,8 @@ public class ListingSearchService(AppDbContext db)
     private static IQueryable<Listing> ApplyFilters(
         IQueryable<Listing> src, ListingQuery q, bool includeOwnerSearch, Expression<Func<Listing, decimal>> priceTry)
     {
+        // City/District açılır listelerden geldiği için birebir eşleşir; Mahalle serbest metindir: büyük-küçük harfe duyarsız "içerir" (ILIKE).
+        // Aksan duyarsız değildir ("bostanli" "Bostanlı"yı bulmaz); aksan katlama (unaccent) bilerek eklenmedi.
         // Type == null: tür filtresi yok. Bu durumda fiyat aralığı satılık ve kiralık fiyatlarını karıştırır; sorumluluk yöneticidedir.
         var query = src;
         if (q.Type is { } type) { query = query.Where(l => l.Type == type); }
@@ -101,7 +104,7 @@ public class ListingSearchService(AppDbContext db)
 
         if (!string.IsNullOrWhiteSpace(q.City)) { var v = q.City.Trim(); query = query.Where(l => l.City == v); }
         if (!string.IsNullOrWhiteSpace(q.District)) { var v = q.District.Trim(); query = query.Where(l => l.District == v); }
-        if (!string.IsNullOrWhiteSpace(q.Neighborhood)) { var v = q.Neighborhood.Trim(); query = query.Where(l => l.Neighborhood == v); }
+        if (!string.IsNullOrWhiteSpace(q.Neighborhood)) { var v = q.Neighborhood.Trim(); var pattern = $"%{EscapeLike(v)}%"; query = query.Where(l => EF.Functions.ILike(l.Neighborhood, pattern, "\\")); }
 
         if (q.Currency is { } cur) { query = query.Where(l => l.Currency == cur); }
 
@@ -114,6 +117,9 @@ public class ListingSearchService(AppDbContext db)
         if (q.Rooms is { Length: > 0 } rooms) { query = query.Where(l => rooms.Contains(l.Rooms)); }
         if (q.MaxBuildingAge is { } age) { query = query.Where(l => l.BuildingAge <= age); }
         if (q.Floor is { } floor) { query = query.Where(l => l.Floor == floor); }
+        if (q.MinBathrooms is { } minBath) { query = query.Where(l => l.Bathrooms >= minBath); }
+        if (q.MinTotalFloors is { } minTf) { query = query.Where(l => l.TotalFloors >= minTf); }
+        if (q.MaxTotalFloors is { } maxTf) { query = query.Where(l => l.TotalFloors <= maxTf); }
         if (q.Heating is { } heating) { query = query.Where(l => l.Heating == heating); }
         if (q.Furnishing is { } furnishing) { query = query.Where(l => l.Furnishing == furnishing); }
         if (q.Balcony is { } balcony) { query = query.Where(l => l.Balcony == balcony); }

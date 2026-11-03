@@ -18,7 +18,7 @@ const filled = (over = {}) => ({
 describe('toInput', () => {
   it('toInput_converts_numbers_and_nulls', () => {
     const p = toInput(filled({
-      price: '1250000.5', bathrooms: '2', grossM2: '120', netM2: '', floor: '-1', totalFloors: 5, buildingAge: '0',
+      price: '1.250.000,5', bathrooms: '2', grossM2: '120', netM2: '', floor: '-1', totalFloors: 5, buildingAge: '0',
       badge: '  ', neighborhood: '', ownerNote: '', description: ''
     }))
     expect(p.title).toBe('Deniz manzaralı')
@@ -65,6 +65,19 @@ describe('toInput', () => {
   })
 })
 
+it('Turkish_grouping_in_text_boxes_becomes_the_right_number', () => {
+  expect(toInput(filled({ price: '1.250' })).price).toBe(1250)
+  expect(toInput(filled({ price: '5.000.000' })).price).toBe(5000000)
+  expect(toInput(filled({ type: 'Kiralik', deposit: '30.000', aidat: '1.250,50' }))).toMatchObject({ deposit: 30000, aidat: 1250.5 })
+  expect(toInput(filled({ grossM2: '1.200', floor: '-2' }))).toMatchObject({ grossM2: 1200, floor: -2 })
+})
+
+it('detail_decimals_are_shown_with_a_comma_so_they_round_trip', () => {
+  const f = fromDetail({ price: 1250.5, deposit: 30000, aidat: null, owner: {}, tags: [] })
+  expect(f.price).toBe('1250,5')
+  expect(toInput(f).price).toBe(1250.5)
+})
+
 describe('useListingForm', () => {
   it('kiralik_fields_cleared_when_switching_to_satilik', () => {
     const { form } = useListingForm()
@@ -102,7 +115,7 @@ describe('useListingForm', () => {
       owner: { name: 'M', phone: '1', note: null }, tags: [{ id: 4, name: 'Klima', group: 'Ic' }]
     })
     expect(f.form.type).toBe('Kiralik')
-    expect(f.form.deposit).toBe(30000)
+    expect(f.form.deposit).toBe('30000') // yazı kutusu biçimi (Türkçe, binliksiz)
     expect(f.form.aidat).toBe('')
     expect(f.form.badge).toBe('')
     expect(f.form.ownerName).toBe('M')
@@ -116,6 +129,19 @@ describe('useListingForm', () => {
 })
 
 describe('validation', () => {
+  it('unreadable_numbers_get_an_inline_error_instead_of_being_dropped', () => {
+    const e = validate(filled({ price: '12a', grossM2: '1.5.5', floor: 'x', bathrooms: '2' }))
+    expect(e.price).toBe('Geçerli bir sayı girin')
+    expect(e.grossM2).toBe('Geçerli bir sayı girin')
+    expect(e.floor).toBe('Geçerli bir sayı girin')
+    expect(e.bathrooms).toBeUndefined()
+    expect(validate(filled({ price: '1.25' })).price).toBe('Geçerli bir sayı girin')
+    expect(validate(filled({ price: '5.000.000' })).price).toBeUndefined()
+  })
+  it('deposit_is_only_checked_for_kiralik', () => {
+    expect(validate(filled({ type: 'Satilik', deposit: 'abc' })).deposit).toBeUndefined()
+    expect(validate(filled({ type: 'Kiralik', deposit: 'abc' })).deposit).toBe('Geçerli bir sayı girin')
+  })
   it('validation_requires_basics', () => {
     const errors = validate(emptyForm())
     expect(Object.keys(errors).sort()).toEqual(['city', 'district', 'ownerName', 'ownerPhone', 'price', 'rooms', 'title'])

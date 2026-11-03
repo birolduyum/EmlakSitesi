@@ -82,7 +82,7 @@ public static class ShowingEndpoints
             if (listingId is { } lid) { q = q.Where(r => r.Showing.ListingId == lid); }
             if (!string.IsNullOrWhiteSpace(username))
             {
-                var u = username.Trim().ToLower();
+                var u = username.Trim().ToLowerInvariant();
                 q = q.Where(r => r.Showing.Username.ToLower() == u);
             }
             if (fromUtc is { } f) { q = q.Where(r => r.Showing.TakenAt >= f); }
@@ -115,6 +115,11 @@ public static class ShowingEndpoints
     private static IResult BadBound(string name)
         => Results.BadRequest(new { errors = new[] { $"'{name}' geçerli bir tarih değil (örn. 2026-11-02 ya da 2026-11-02T10:30:00Z)." } });
 
+    // Makul tarih aralığı dışındaki sınırlar (0001-01-01, 9999-12-31 ...) 400 olur: AddDays/AddTicks taşması ve Npgsql'in
+    // uç değer dönüşümü 500'e yol açmasın.
+    private static readonly DateTime MinBound = new(1900, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime MaxBound = new(2200, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
     /// <summary>
     /// Boş değer = sınır yok. Yalnızca tarih (yyyy-MM-dd) verilirse UTC gün başı; endOfDay ise ertesi günün başı (dışlayıcı üst sınır,
     /// yani o günün tamamı dahil). Saatli değer verilirse olduğu gibi kullanılır; üst sınırda tam eşleşme dahildir (+1 mikrosaniye; PostgreSQL mikrosaniye hassasiyetindedir).
@@ -125,20 +130,25 @@ public static class ShowingEndpoints
         if (string.IsNullOrWhiteSpace(raw)) { return true; }
 
         var s = raw.Trim();
+        DateTime value;
         if (DateOnly.TryParseExact(s, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var d))
         {
             var start = DateTime.SpecifyKind(d.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc);
-            utc = endOfDay ? start.AddDays(1) : start;
-            return true;
+            if (start < MinBound || start >= MaxBound) { return false; }
+            value = endOfDay ? start.AddDays(1) : start;
         }
-
-        if (DateTimeOffset.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var dto))
+        else if (DateTimeOffset.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var dto))
         {
             var t = dto.UtcDateTime;
-            utc = endOfDay ? t.AddTicks(TimeSpan.TicksPerMicrosecond) : t;
-            return true;
+            if (t < MinBound || t >= MaxBound) { return false; }
+            value = endOfDay ? t.AddTicks(TimeSpan.TicksPerMicrosecond) : t;
+        }
+        else
+        {
+            return false;
         }
 
-        return false;
+        utc = value;
+        return true;
     }
 }

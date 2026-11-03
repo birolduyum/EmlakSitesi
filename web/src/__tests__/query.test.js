@@ -19,6 +19,18 @@ describe('routeQueryToParams', () => {
     const p = routeQueryToParams({ minPriceTry: 'abc', maxPriceTry: '-5', minM2: '', maxBuildingAge: '-1', floor: 'x', page: '0' })
     expect(p).toEqual({ type: 'Satilik', page: 1, pageSize: 20 })
   })
+  it('reads_Turkish_grouped_numbers_from_the_URL', () => {
+    const p = routeQueryToParams({ maxPriceTry: '5.000.000', minPriceTry: '1.250,5', maxM2: '1.200' })
+    expect(p).toMatchObject({ maxPriceTry: 5000000, minPriceTry: 1250.5, maxM2: 1200 })
+  })
+  it('parses_bathroom_and_building_floor_count_filters', () => {
+    const p = routeQueryToParams({ minBathrooms: '2', minTotalFloors: '5', maxTotalFloors: '12' })
+    expect(p).toMatchObject({ minBathrooms: 2, minTotalFloors: 5, maxTotalFloors: 12 })
+    expect(routeQueryToParams({ minBathrooms: 'x', minTotalFloors: '-1', maxTotalFloors: '' })).toEqual({ type: 'Satilik', page: 1, pageSize: 20 })
+    expect(paramsToRouteQuery({ minBathrooms: 3, minTotalFloors: 4, maxTotalFloors: 9 }))
+      .toEqual({ minBathrooms: '3', minTotalFloors: '4', maxTotalFloors: '9' })
+    expect(routeQueryToParams(paramsToRouteQuery(p))).toEqual(p)
+  })
   it('ignores bad enums and false booleans', () => {
     const p = routeQueryToParams({ type: 'Arsa', heating: 'Nuclear', currency: 'GBP', sort: 'Random', balcony: 'false', swap: '1' })
     expect(p).toEqual({ type: 'Satilik', page: 1, pageSize: 20 })

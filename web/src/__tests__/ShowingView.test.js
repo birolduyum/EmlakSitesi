@@ -201,4 +201,34 @@ describe('ShowingView', () => {
     await ta.setValue('abc')
     expect(openItems(w)[0].text()).toContain('3 / 500')
   })
+
+  it('late initial /mine response does not overwrite a freshly taken record', async () => {
+    let resolveMine
+    api.get.mockImplementation((path) => {
+      if (path === '/api/showings/mine') return new Promise((r) => (resolveMine = r))
+      return Promise.resolve({ items: [listing(5)], total: 1, page: 1, pageSize: 8 })
+    })
+    api.post.mockResolvedValue(record(1, { listingId: 5, listingTitle: 'Ev 5' }))
+    const w = await make()
+    await pick(w, 5)
+    await takeButton(w).trigger('click')
+    await flushPromises()
+    resolveMine([])
+    await flushPromises()
+    expect(openItems(w)).toHaveLength(1)
+    expect(openItems(w)[0].text()).toContain('Ev 5')
+  })
+
+  it('close 409 reloads /mine', async () => {
+    mine = [record(1), record(2)]
+    api.post.mockRejectedValue(new ApiError(409, null))
+    const w = await make()
+    mine = [record(2)]
+    await openItems(w)[0].find('button').trigger('click')
+    await flushPromises()
+    expect(api.get.mock.calls.filter((c) => c[0] === '/api/showings/mine')).toHaveLength(2)
+    expect(openItems(w)).toHaveLength(1)
+    expect(openItems(w)[0].text()).toContain('Ev 2')
+    expect(status(w).text()).toContain('zaten kapatılmıştı')
+  })
 })

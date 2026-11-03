@@ -301,6 +301,36 @@ public class ShowingTests : IClassFixture<ApiFactory>
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.GetAsync("/api/admin/showings?to=2026-13-45")).StatusCode);
     }
 
+    [Theory]
+    [InlineData("to=9999-12-31")]
+    [InlineData("to=9999-12-31T23:59:59.9999999Z")]
+    [InlineData("from=0001-01-01")]
+    [InlineData("from=0001-01-01T00:00:00Z")]
+    [InlineData("to=1800-01-01")]
+    public async Task Report_ExtremeBounds_Return400NotServerError(string query)
+    {
+        await ResetAsync();
+        var admin = await _factory.LoginAsync("admin1");
+
+        var res = await admin.GetAsync($"/api/admin/showings?{query}");
+
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+    }
+
+    [Fact]
+    public async Task Report_UsernameFilter_IsCaseInsensitive()
+    {
+        await ResetAsync();
+        var listing = await SeedAsync(new ListingBuilder());
+        var field = await _factory.LoginAsync("saha1");
+        await TakeAsync(field, listing.Id);
+        var admin = await _factory.LoginAsync("admin1");
+
+        var rows = await ReadListAsync(await admin.GetAsync("/api/admin/showings?username=SAHA1"));
+
+        Assert.Single(rows);
+    }
+
     [Fact]
     public async Task Report_IncludesDeletedListingsHistory()
     {

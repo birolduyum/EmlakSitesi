@@ -33,7 +33,7 @@ public static class AuthEndpoints
             }
 
             return Results.Ok(new LoginResponse(tokens.CreateToken(user), user.Username, user.Role.ToString()));
-        }).AllowAnonymous();
+        }).AllowAnonymous().RequireRateLimiting(LoginRateLimit.PolicyName);
 
         return app;
     }

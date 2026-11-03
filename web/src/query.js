@@ -1,10 +1,11 @@
+import { parseTrDecimal, parseTrInteger } from './numbers.js'
 import { heatingLabels, furnishingLabels, currencyLabels, sortLabels, typeLabels, statusLabels } from './labels.js'
 
 export const PAGE_SIZE = 20
 
 const STRING_KEYS = ['city', 'district', 'neighborhood', 'text']
 const DECIMAL_KEYS = ['minPriceTry', 'maxPriceTry']
-const INT_KEYS = ['minM2', 'maxM2', 'maxBuildingAge', 'floor']
+const INT_KEYS = ['minM2', 'maxM2', 'maxBuildingAge', 'floor', 'minBathrooms', 'minTotalFloors', 'maxTotalFloors']
 const BOOL_KEYS = ['balcony', 'elevator', 'parking', 'inSite', 'loanEligible', 'swap']
 
 function first(v) {
@@ -12,13 +13,22 @@ function first(v) {
 }
 
 // Boş, sayı olmayan ya da negatif girdi → undefined. (Number('') === 0 tuzağına karşı açıkça elenir.)
+// Türkçe yazım kabul edilir ("5.000.000" → 5000000, "1.250,5" → 1250.5); bunun olmadığı durumda adres çubuğundaki
+// makine biçimi ("1250.5", String(sayı) çıktısı) okunur.
+const MACHINE_NUMBER = /^\d+(\.\d+)?$/
 export function parseNumber(value, { integer = false } = {}) {
   const v = first(value)
   if (v === null || v === undefined || typeof v === 'boolean') return undefined
-  const s = String(v).trim()
-  if (s === '') return undefined
-  const n = Number(s)
-  if (!Number.isFinite(n) || n < 0) return undefined
+  let n
+  if (typeof v === 'number') {
+    n = Number.isFinite(v) && v >= 0 ? v : null
+  } else {
+    const s = String(v).trim()
+    if (s === '') return undefined
+    n = integer ? parseTrInteger(s) : parseTrDecimal(s)
+    if (n === null && MACHINE_NUMBER.test(s)) n = Number(s)
+  }
+  if (n === null || n === undefined || !Number.isFinite(n)) return undefined
   return integer ? Math.floor(n) : n
 }
 

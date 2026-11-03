@@ -22,9 +22,9 @@ const take = useAsyncAction(() => api.post('/api/showings', { listingId: selecte
 })
 
 let loadId = 0
-async function loadMine() {
+async function loadMine(quiet = false) {
   const id = ++loadId
-  listState.value = 'loading'
+  if (quiet !== true) listState.value = 'loading'
   try {
     const data = await api.get('/api/showings/mine')
     if (id !== loadId) return
@@ -32,10 +32,10 @@ async function loadMine() {
     listState.value = 'ready'
   } catch {
     if (id !== loadId) return
-    listState.value = 'error'
+    if (quiet !== true) listState.value = 'error'
   }
 }
-onMounted(loadMine)
+onMounted(() => loadMine())
 onBeforeUnmount(() => loadId++)
 
 async function takeKey() {
@@ -44,10 +44,16 @@ async function takeKey() {
   const result = await take.run()
   if (!result?.ok) return
   const rec = result.data
+  loadId++ // uçuştaki ilk /mine cevabı yeni kaydı ezmesin
   selected.value = null
   records.value = [rec, ...records.value.filter((r) => r.id !== rec.id)]
   if (listState.value !== 'ready') listState.value = 'ready'
   status.value = `${rec.listingTitle} için kayıt açıldı.`
+}
+
+function onStale(rec) {
+  status.value = `${rec.listingTitle} kaydı zaten kapatılmıştı; liste yenilendi.`
+  loadMine(true)
 }
 
 function onClosed(rec) {
@@ -75,11 +81,11 @@ function onClosed(rec) {
       <p v-if="listState === 'loading'" class="af-note" aria-busy="true">Yükleniyor…</p>
       <div v-else-if="listState === 'error'" role="alert">
         <p class="af-error">Açık kayıtlar yüklenemedi.</p>
-        <button type="button" class="secondary" @click="loadMine">Tekrar dene</button>
+        <button type="button" class="secondary" @click="loadMine()">Tekrar dene</button>
       </div>
       <p v-else-if="records.length === 0" class="empty-note">Açık kaydınız yok</p>
       <ul v-else class="recs">
-        <OpenShowingItem v-for="r in records" :key="r.id" :record="r" :admin="admin" @closed="onClosed" />
+        <OpenShowingItem v-for="r in records" :key="r.id" :record="r" :admin="admin" @closed="onClosed" @stale="onStale" />
       </ul>
     </div>
   </section>

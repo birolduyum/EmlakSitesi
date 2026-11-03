@@ -49,6 +49,8 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("ConnectionStrings:Default", _db.GetConnectionString());
         builder.UseSetting("Jwt:Key", "test-only-signing-key-at-least-32-chars-long!!");
         builder.UseSetting("Photos:Path", PhotoRoot);
+        // Testler cok sayida giris yapar; hiz siniri yalnizca kendi testlerinde (ThrottledApiFactory) dusurulur.
+        builder.UseSetting("RateLimit:LoginPerMinute", "100000");
         (string Name, string Role)[] users = [("admin1", "Admin"), ("admin2", "Admin"), ("saha1", "Field")];
         for (var i = 0; i < users.Length; i++)
         {
