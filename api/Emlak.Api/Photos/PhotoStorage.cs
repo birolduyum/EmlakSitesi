@@ -21,6 +21,18 @@ public class PhotoStorage
     public async Task<string> SaveAsync(int listingId, Microsoft.AspNetCore.Http.IFormFile file, CancellationToken ct)
     {
         await using var source = file.OpenReadStream();
+        return await SaveStreamAsync(listingId, source, ct);
+    }
+
+    /// <summary>Ham baytları aynı doğrulamayla (imza ile tür tespiti) kaydeder; örnek veri gibi sunucu içi kaynaklar içindir.</summary>
+    public async Task<string> SaveBytesAsync(int listingId, byte[] data, CancellationToken ct)
+    {
+        await using var source = new MemoryStream(data, writable: false);
+        return await SaveStreamAsync(listingId, source, ct);
+    }
+
+    private async Task<string> SaveStreamAsync(int listingId, Stream source, CancellationToken ct)
+    {
         var ext = await PhotoValidator.DetectExtensionAsync(source, ct)
                   ?? throw new InvalidDataException("Desteklenmeyen dosya türü.");
 

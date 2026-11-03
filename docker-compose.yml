@@ -33,6 +33,7 @@ services:
       Advisor__Name: ${Advisor__Name}
       Advisor__Phone: ${Advisor__Phone}
       Advisor__WhatsApp: ${Advisor__WhatsApp}
+      Seed__Sample: "true"
       Photos__Path: /data/photos
     volumes:
       - photos:/data/photos

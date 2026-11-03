@@ -17,6 +17,7 @@ var app = builder.Build();
 
 app.Services.MigrateDatabase();
 await app.Services.SeedUsersAsync();
+await app.Services.SeedSampleDataAsync();
 
 // Fotoğraflar Photos:Path klasöründen /photos altında sunulur; dizin listeleme açılmaz, tür koklama kapatılır.
 app.UseStaticFiles(new StaticFileOptions
