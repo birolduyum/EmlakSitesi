@@ -590,7 +590,7 @@ public class AdminListingTests : IClassFixture<ApiFactory>
 
     private static void AssertNoOwnerData(string json)
     {
-        foreach (var forbidden in new[] { OwnerName, OwnerPhone, "999 88 77", OwnerNote, "owner", "phone" })
+        foreach (var forbidden in new[] { OwnerName, OwnerPhone, "999 88 77", "9998877", OwnerNote, "owner", "ownerPhone" })
         {
             Assert.DoesNotContain(forbidden, json, StringComparison.OrdinalIgnoreCase);
         }

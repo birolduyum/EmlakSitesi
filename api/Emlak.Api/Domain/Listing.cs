@@ -41,7 +41,9 @@ public class Listing
     public string? DeletedBy { get; set; }
     public DateTime? RestoredAt { get; set; }
     public string? RestoredBy { get; set; }
+    public int? AdvisorId { get; set; }
 
+    public Advisor? Advisor { get; set; }
     public Owner Owner { get; set; } = null!;
     public List<Photo> Photos { get; set; } = new();
     public List<FeatureTag> Tags { get; set; } = new();

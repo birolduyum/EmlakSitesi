@@ -22,6 +22,7 @@ function signOut() {
         <router-link to="/admin/gosterim" active-class="current">Gösterme</router-link>
         <template v-if="admin">
           <router-link to="/admin/rapor" active-class="current">Rapor</router-link>
+          <router-link to="/admin/danismanlar" active-class="current">Danışmanlar</router-link>
           <router-link to="/admin/kur" active-class="current">Kur</router-link>
         </template>
       </nav>

@@ -82,6 +82,14 @@ public static class SampleDataSeeder
             3, ["Çelik Kapı"], "Selin Koç", "0532 000 00 10", null, 58, Deleted: true),
     ];
 
+    // Kurgusal danışmanlar; numaralar ev sahiplerinin numaralarından (0532 000 00 xx) bilerek farklıdır.
+    private static readonly (string Name, string Phone, string? WhatsApp)[] AdvisorCatalog =
+    [
+        ("Ayşe Kaya", "+90 532 000 10 01", null),
+        ("Mehmet Demir", "+90 532 000 10 02", "https://wa.me/905320001002"),
+        ("Zeynep Yalçın", "0 532 000 10 03", null),
+    ];
+
     /// <summary>İlan tablosu tamamen boşsa örnek veriyi ekler; aksi halde hiçbir şey yapmaz.</summary>
     public static async Task SeedAsync(AppDbContext db, PhotoStorage storage, CancellationToken ct = default)
     {
@@ -92,6 +100,11 @@ public static class SampleDataSeeder
         var tags = await EnsureTagsAsync(db, ct);
         var now = DateTime.UtcNow;
         var photoNo = 0;
+        var advisors = AdvisorCatalog
+            .Select(a => new Advisor { Name = a.Name, Phone = a.Phone, WhatsApp = a.WhatsApp, IsActive = true, CreatedAt = now, CreatedBy = "admin1" })
+            .ToList();
+        db.Advisors.AddRange(advisors);
+        await db.SaveChangesAsync(ct);
         var saved = new List<Listing>();
 
         for (var i = 0; i < Samples.Length; i++)
@@ -107,6 +120,8 @@ public static class SampleDataSeeder
                 Description = s.Description,
                 CreatedAt = now.AddDays(-s.DaysAgo).AddHours(-i),
                 CreatedBy = i % 2 == 0 ? "admin1" : "admin2",
+                // Sırayla danışmanlar; her dördüncü ilanın danışmanı yok (sitedeki varsayılan danışman görünür).
+                Advisor = i % (advisors.Count + 1) < advisors.Count ? advisors[i % (advisors.Count + 1)] : null,
                 Owner = new Owner { Name = s.OwnerName, Phone = s.OwnerPhone, Note = s.OwnerNote },
                 Tags = s.Tags.Select(n => tags[n]).ToList(),
             };

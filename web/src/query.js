@@ -95,6 +95,8 @@ function normalize(raw, admin = false) {
     if (status && status !== 'Active') out.status = status
     const ownerText = parseText(raw.ownerText)
     if (ownerText !== undefined) out.ownerText = ownerText
+    const advisorId = parseNumber(raw.advisorId, { integer: true })
+    if (advisorId !== undefined && advisorId >= 1) out.advisorId = advisorId
   }
   return out
 }
@@ -118,7 +120,7 @@ function toRouteQuery(p, admin) {
   return q
 }
 
-// Yönetici listesi: tür yoksa iki tür birden; ek süzgeçler status (Aktif/Silinenler/Hepsi) ve ownerText.
+// Yönetici listesi: tür yoksa iki tür birden; ek süzgeçler status (Aktif/Silinenler/Hepsi), ownerText ve advisorId (danışman).
 export function adminRouteQueryToParams(query) {
   return normalize(query ?? {}, true)
 }

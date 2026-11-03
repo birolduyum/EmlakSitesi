@@ -19,7 +19,7 @@ public static class AdminListingEndpoints
 
         // Admin: Status ve OwnerText geçerli, ev sahibi dahil. Field: yalnızca aktif, OwnerText yok sayılır, cevapta ev sahibi alanı hiç yok
         // (Field cevabı yalnızca Public* DTO'larıyla üretilir; AdminListing* türlerine hiç dokunmaz).
-        g.MapGet("/listings", async ([AsParameters] ListingQuery q, ClaimsPrincipal user, ListingSearchService search, CancellationToken ct) =>
+        g.MapGet("/listings", async ([AsParameters] ListingQuery q, ClaimsPrincipal user, ListingSearchService search, IConfiguration config, CancellationToken ct) =>
         {
             var isAdmin = IsAdmin(user);
             var safe = q with
@@ -33,10 +33,11 @@ public static class AdminListingEndpoints
 
             return isAdmin
                 ? Results.Ok(new PagedResult<AdminListingSummary>(items.Select(AdminMapper.ToSummary).ToList(), total, safe.Page, safe.PageSize))
-                : Results.Ok(new PagedResult<PublicListingSummary>(items.Select(PublicMapper.ToSummary).ToList(), total, safe.Page, safe.PageSize));
+                : Results.Ok(new PagedResult<PublicListingSummary>(
+                    items.Select(l => PublicMapper.ToSummary(l, SiteInfoFactory.DefaultAdvisor(config))).ToList(), total, safe.Page, safe.PageSize));
         }).RequireAuthorization(AuthExtensions.Staff);
 
-        g.MapGet("/listings/{id:int}", async (int id, ClaimsPrincipal user, AppDbContext db, CancellationToken ct) =>
+        g.MapGet("/listings/{id:int}", async (int id, ClaimsPrincipal user, AppDbContext db, IConfiguration config, CancellationToken ct) =>
         {
             var isAdmin = IsAdmin(user);
             var listing = await LoadAsync(db.Listings.AsNoTracking(), id, includeOwner: isAdmin, ct);
@@ -48,7 +49,7 @@ public static class AdminListingEndpoints
             var showingCount = await db.Showings.CountAsync(s => s.ListingId == id, ct);
             return isAdmin
                 ? Results.Ok(AdminMapper.ToDetail(listing, showingCount))
-                : Results.Ok(PublicMapper.ToDetail(listing, showingCount));
+                : Results.Ok(PublicMapper.ToDetail(listing, showingCount, SiteInfoFactory.DefaultAdvisor(config)));
         }).RequireAuthorization(AuthExtensions.Staff);
 
         g.MapPost("/listings", async (AdminListingInput input, ClaimsPrincipal user, AppDbContext db, CancellationToken ct) =>
@@ -59,8 +60,12 @@ public static class AdminListingEndpoints
             var tags = await ResolveTagsAsync(db, input.TagIds, ct);
             if (tags is null) { return BadRequest(["Bilinmeyen etiket seçildi."]); }
 
+            var (advisor, advisorError) = await ResolveAdvisorAsync(db, input.AdvisorId, currentAdvisorId: null, ct);
+            if (advisorError is not null) { return BadRequest([advisorError]); }
+
             var listing = new Listing { CreatedAt = DateTime.UtcNow, CreatedBy = UserName(user), Owner = new Owner() };
             Apply(listing, input, tags);
+            listing.Advisor = advisor;
             db.Listings.Add(listing);
             await db.SaveChangesAsync(ct);
 
@@ -79,7 +84,11 @@ public static class AdminListingEndpoints
             var tags = await ResolveTagsAsync(db, input.TagIds, ct);
             if (tags is null) { return BadRequest(["Bilinmeyen etiket seçildi."]); }
 
+            var (advisor, advisorError) = await ResolveAdvisorAsync(db, input.AdvisorId, listing.AdvisorId, ct);
+            if (advisorError is not null) { return BadRequest([advisorError]); }
+
             Apply(listing, input, tags);
+            listing.Advisor = advisor;
             listing.UpdatedAt = DateTime.UtcNow;
             listing.UpdatedBy = UserName(user);
             await db.SaveChangesAsync(ct);
@@ -160,7 +169,7 @@ public static class AdminListingEndpoints
     {
         // Ev sahibi yalnızca yönetici için yüklenir (Saha cevabı onu hiç kullanmaz).
         var query = includeOwner ? src.Include(l => l.Owner) : src;
-        return query.Include(l => l.Photos).Include(l => l.Tags).AsSplitQuery().SingleOrDefaultAsync(l => l.Id == id, ct);
+        return query.Include(l => l.Advisor).Include(l => l.Photos).Include(l => l.Tags).AsSplitQuery().SingleOrDefaultAsync(l => l.Id == id, ct);
     }
 
     /// <summary>Verilen kimliklerin etiketleri; bilinmeyen kimlik varsa null.</summary>
@@ -169,6 +178,20 @@ public static class AdminListingEndpoints
         var distinct = (ids ?? []).Distinct().ToArray();
         var tags = await db.FeatureTags.Where(t => distinct.Contains(t.Id)).ToListAsync(ct);
         return tags.Count == distinct.Length ? tags : null;
+    }
+
+    /// <summary>
+    /// Atanacak danışman: boşsa varsayılan (null). Var olmalı ve aktif olmalıdır; istisna: ilanın zaten bağlı olduğu danışman
+    /// (pasifleştirilmiş olsa da ilanı düzenlerken değiştirmeye zorlanmaz).
+    /// </summary>
+    private static async Task<(Advisor? Advisor, string? Error)> ResolveAdvisorAsync(AppDbContext db, int? id, int? currentAdvisorId, CancellationToken ct)
+    {
+        if (id is not { } advisorId) { return (null, null); }
+
+        var advisor = await db.Advisors.SingleOrDefaultAsync(a => a.Id == advisorId, ct);
+        if (advisor is null) { return (null, "Seçilen danışman bulunamadı."); }
+        if (!advisor.IsActive && advisorId != currentAdvisorId) { return (null, "Seçilen danışman pasif; yeni ilana atanamaz."); }
+        return (advisor, null);
     }
 
     private static void Apply(Listing l, AdminListingInput i, List<FeatureTag> tags)

@@ -34,4 +34,14 @@ describe('whatsappMessageUrl', () => {
     expect(safeWhatsappUrl('https://wa.me/1')).toBe('https://wa.me/1')
     expect(safeWhatsappUrl('javascript:alert(1)')).toBeNull()
   })
+  it('survives a lone-surrogate title: falls back to the plain base url without text', () => {
+    const u = whatsappMessageUrl('https://wa.me/905320000001?x=1&text=eski', { id: 3, title: 'bozuk \ud800 başlık' })
+    expect(u).toBe('https://wa.me/905320000001?x=1')
+  })
+  it('omits missing title or id instead of writing undefined', () => {
+    expect(text(whatsappMessageUrl('https://wa.me/1', { id: 7 }))).toBe('Merhaba, (İlan No: 7) hakkında bilgi almak istiyorum.')
+    expect(text(whatsappMessageUrl('https://wa.me/1', { title: 'Daire' }))).toBe('Merhaba, Daire hakkında bilgi almak istiyorum.')
+    expect(text(whatsappMessageUrl('https://wa.me/1', { id: null, title: null }))).toBe('Merhaba, bilgi almak istiyorum.')
+    expect(text(whatsappMessageUrl('https://wa.me/1', {}))).not.toContain('undefined')
+  })
 })

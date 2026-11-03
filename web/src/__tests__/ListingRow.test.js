@@ -98,4 +98,20 @@ describe('ListingRow type label', () => {
     const off = mount(ListingRow, { props: { listing }, global: { plugins: [router] } })
     expect(off.find('[data-testid="type-tag"]').exists()).toBe(false)
   })
+  it('row_uses_the_listing_advisor_not_the_site_default', async () => {
+    api.get.mockResolvedValue({ advisorName: 'Varsayılan Kişi', advisorPhone: '+90 555 000 00 00', whatsappUrl: 'https://wa.me/905550000000' })
+    const advisor = { name: 'Ayşe Kaya', phone: '+90 532 111 22 33', whatsappUrl: 'https://wa.me/905321112233' }
+    const { w } = await make({ ...listing, advisor })
+    expect(w.find('.advisor .name').text()).toContain('Ayşe Kaya')
+    expect(w.text()).not.toContain('Varsayılan Kişi')
+    const a = w.find('a[href="https://wa.me/905321112233"]')
+    expect(a.text()).toBe("WhatsApp'tan Ara")
+    expect(a.attributes('aria-label')).toBe("WhatsApp'tan Ara: Ayşe Kaya")
+    expect(w.find('a[href="https://wa.me/905550000000"]').exists()).toBe(false)
+    expect(api.get).not.toHaveBeenCalled() // satır başına ek istek yok: danışman ilanın içinden gelir
+  })
+  it('row_with_advisor_without_whatsapp_falls_back_to_tel_of_that_advisor', async () => {
+    const { w } = await make({ ...listing, advisor: { name: 'Ayşe Kaya', phone: '0 532 444 55 66', whatsappUrl: null } })
+    expect(w.find('a[href="tel:05324445566"]').text()).toBe('Ara')
+  })
 })

@@ -16,6 +16,7 @@ const routes = [
       { path: 'ilan/:id', component: () => import('./views/admin/ListingFormView.vue'), meta: { role: 'Admin' } },
       { path: 'gosterim', component: () => import('./views/admin/ShowingView.vue') },
       { path: 'rapor', component: () => import('./views/admin/ReportView.vue'), meta: { role: 'Admin' } },
+      { path: 'danismanlar', component: () => import('./views/admin/AdvisorsView.vue'), meta: { role: 'Admin' } },
       { path: 'kur', component: () => import('./views/admin/RatesView.vue'), meta: { role: 'Admin' } }
     ]
   },

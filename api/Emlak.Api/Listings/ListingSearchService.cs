@@ -31,6 +31,7 @@ public class ListingSearchService(AppDbContext db)
         // Ev sahibi yalnızca yönetici cevabı için yüklenir; ziyaretçi/saha yolunda hiç okunmaz.
         if (includeOwner) { paged = paged.Include(l => l.Owner); }
         var items = await paged
+            .Include(l => l.Advisor)
             .Include(l => l.Photos.OrderBy(p => p.SortOrder))
             .AsSplitQuery()
             .ToListAsync(ct);
@@ -105,6 +106,8 @@ public class ListingSearchService(AppDbContext db)
         if (!string.IsNullOrWhiteSpace(q.City)) { var v = q.City.Trim(); query = query.Where(l => l.City == v); }
         if (!string.IsNullOrWhiteSpace(q.District)) { var v = q.District.Trim(); query = query.Where(l => l.District == v); }
         if (!string.IsNullOrWhiteSpace(q.Neighborhood)) { var v = q.Neighborhood.Trim(); var pattern = $"%{EscapeLike(v)}%"; query = query.Where(l => EF.Functions.ILike(l.Neighborhood, pattern, "\\")); }
+
+        if (q.AdvisorId is { } advisorId) { query = query.Where(l => l.AdvisorId == advisorId); }
 
         if (q.Currency is { } cur) { query = query.Where(l => l.Currency == cur); }
 

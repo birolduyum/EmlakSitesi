@@ -6,7 +6,9 @@ const props = defineProps({
   photos: { type: Array, default: () => [] },
   startIndex: { type: Number, default: 0 },
   // Açan öğe; Safari/iOS'ta tıklanan düğme odak almadığı için açıkça verilir.
-  opener: { type: Object, default: null }
+  opener: { type: Object, default: null },
+  // İlanın danışmanı (`listing.advisor`); "Ara" düğmesi bunun numarasını kullanır.
+  advisor: { type: Object, default: null }
 })
 const emit = defineEmits(['close'])
 
@@ -127,7 +129,7 @@ function onStageClick(e) {
       <div class="bar">
         <button ref="backButton" type="button" class="bar-btn" data-testid="back" @click="emit('close')">Geri</button>
         <span class="counter" data-testid="counter" aria-live="polite">{{ index + 1 }} / {{ photos.length }}</span>
-        <AdvisorCallLink />
+        <AdvisorCallLink :advisor="advisor" />
       </div>
       <div
         class="stage"

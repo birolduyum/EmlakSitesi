@@ -2,7 +2,9 @@
 import { useAdvisor } from '../composables/useAdvisor.js'
 import AdvisorCallLink from './AdvisorCallLink.vue'
 
-const { info, telHref, whatsappUrl } = useAdvisor()
+// İlanın danışmanı (`listing.advisor`); yoksa sitedeki varsayılan danışman.
+const props = defineProps({ advisor: { type: Object, default: null } })
+const { info, telHref, whatsappUrl } = useAdvisor(() => props.advisor)
 </script>
 
 <template>
@@ -12,7 +14,7 @@ const { info, telHref, whatsappUrl } = useAdvisor()
         <span class="role">Danışman</span>
         {{ info.advisorName }}
       </span>
-      <AdvisorCallLink />
+      <AdvisorCallLink :advisor="advisor" />
     </template>
   </div>
 </template>

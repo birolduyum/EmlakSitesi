@@ -219,4 +219,61 @@ describe('AdminListView', () => {
     expect(w.text()).toContain('Yeni sonuç')
     expect(w.text()).not.toContain('Eski sonuç')
   })
+
+  describe('advisor', () => {
+    const advisors = [
+      { id: 4, name: 'Zeynep Yalçın', isActive: true },
+      { id: 2, name: 'Ayşe Kaya', isActive: true },
+      { id: 3, name: 'Eski Kişi', isActive: false }
+    ]
+    beforeEach(() => {
+      api.get.mockImplementation((path, params) => {
+        if (path === '/api/listings/filters') return Promise.resolve(filtersBody)
+        if (path === '/api/admin/listings') return listImpl(params)
+        if (path === '/api/admin/advisors') return Promise.resolve(advisors)
+        return Promise.reject({ status: 404 })
+      })
+    })
+
+    it('shows_the_advisor_name_on_each_row_or_varsayilan', async () => {
+      listImpl = async () => ({ items: [row(1, { advisorId: 2, advisorName: 'Ayşe Kaya' }), row(2, { advisorId: null, advisorName: null })], total: 2 })
+      const { w } = await make()
+      const lines = w.findAll('[data-testid="advisor-line"]').map((l) => l.text())
+      expect(lines).toEqual(['Danışman: Ayşe Kaya', 'Danışman: varsayılan'])
+    })
+    it('advisor_filter_lists_advisors_in_turkish_order_and_marks_inactive', async () => {
+      const { w } = await make()
+      const opts = w.findAll('select[name="advisorId"] option').map((o) => o.text())
+      expect(opts).toEqual(['Hepsi', 'Ayşe Kaya', 'Eski Kişi (pasif)', 'Zeynep Yalçın'])
+    })
+    it('advisor_filter_is_a_draft_until_apply', async () => {
+      const { w, router } = await make()
+      await w.find('select[name="advisorId"]').setValue('2')
+      await flushPromises()
+      expect(listCalls()).toHaveLength(1)
+      expect(router.currentRoute.value.query.advisorId).toBeUndefined()
+      await w.find('#filter-panel form').trigger('submit')
+      await flushPromises()
+      expect(listCalls()).toHaveLength(2)
+      expect(listCalls().at(-1)[1]).toMatchObject({ advisorId: 2, page: 1 })
+      expect(router.currentRoute.value.query.advisorId).toBe('2')
+    })
+    it('advisorId_url_param_preselects_the_filter_and_is_sent', async () => {
+      const { w } = await make('Admin', '/admin?advisorId=4')
+      expect(listCalls()[0][1]).toMatchObject({ advisorId: 4 })
+      expect(w.find('select[name="advisorId"]').element.value).toBe('4')
+      expect(w.find('select[name="advisorId"] option:checked').text()).toBe('Zeynep Yalçın')
+    })
+    it('invalid_advisorId_param_is_dropped', async () => {
+      await make('Admin', '/admin?advisorId=abc')
+      expect(listCalls()[0][1]).not.toHaveProperty('advisorId')
+    })
+    it('field_role_gets_no_advisor_filter_and_never_asks_for_the_advisor_list', async () => {
+      listImpl = async () => ({ items: [fieldRow(1)], total: 1 })
+      const { w } = await make('Field')
+      expect(w.find('select[name="advisorId"]').exists()).toBe(false)
+      expect(api.get).not.toHaveBeenCalledWith('/api/admin/advisors')
+      expect(w.find('[data-testid="advisor-line"]').exists()).toBe(false)
+    })
+  })
 })

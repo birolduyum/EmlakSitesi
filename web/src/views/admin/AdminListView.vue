@@ -6,6 +6,7 @@ import { isAdmin } from '../../auth.js'
 import { adminRouteQueryToParams, adminParamsToRouteQuery } from '../../query.js'
 import { sortLabels, statusLabels } from '../../labels.js'
 import { useFilterPanelHost } from '../../composables/useFilterPanelHost.js'
+import { useAdvisorList } from '../../composables/useAdvisorList.js'
 import FilterPanel from '../../components/FilterPanel.vue'
 import ListingRow from '../../components/ListingRow.vue'
 import Pagination from '../../components/Pagination.vue'
@@ -29,6 +30,10 @@ const params = computed(() => {
 })
 
 const { filtersOpen, resultsEl, onApplied, activeFilterCount } = useFilterPanelHost(params)
+
+// Danışman süzgeci yalnızca Yönetici'de (Saha danışman listesini okuyamaz).
+const { advisors, load: loadAdvisors } = useAdvisorList()
+if (admin) loadAdvisors()
 
 const items = ref([])
 const total = ref(null)
@@ -186,6 +191,13 @@ const deleteMessage = computed(
             </select>
             <label for="owner-filter">Ev sahibi (ad veya telefon)</label>
             <input id="owner-filter" name="ownerText" type="search" autocomplete="off" :value="draft.ownerText ?? ''" @input="set('ownerText', $event.target.value)" />
+            <label for="advisor-filter">Danışman</label>
+            <!-- Seçenekler sonradan (danışman listesi yüklenince) gelir; seçili durum her seçenekte açıkça işaretlenir. -->
+            <select id="advisor-filter" name="advisorId" @change="set('advisorId', $event.target.value === '' ? undefined : Number($event.target.value))">
+              <option value="" :selected="draft.advisorId === undefined">Hepsi</option>
+              <option v-if="draft.advisorId !== undefined && !advisors.some((a) => a.id === draft.advisorId)" :value="String(draft.advisorId)" selected>Danışman no {{ draft.advisorId }}</option>
+              <option v-for="a in advisors" :key="a.id" :value="String(a.id)" :selected="a.id === draft.advisorId">{{ a.name }}{{ a.isActive ? '' : ' (pasif)' }}</option>
+            </select>
           </div>
         </template>
       </FilterPanel>
@@ -243,6 +255,7 @@ const deleteMessage = computed(
         >
           <template v-if="admin" #meta>
             <p v-if="l.owner" class="owner">Ev sahibi: {{ l.owner.name }} · {{ l.owner.phone }}</p>
+            <p class="owner" data-testid="advisor-line">Danışman: {{ l.advisorName ?? 'varsayılan' }}</p>
           </template>
           <template v-if="admin" #actions>
             <div class="actions">

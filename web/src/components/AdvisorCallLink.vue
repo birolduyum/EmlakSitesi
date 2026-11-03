@@ -1,13 +1,15 @@
 <script setup>
 import { computed } from 'vue'
-import { useAdvisor } from '../composables/useAdvisor.js'
+import { useAdvisor, callLabels } from '../composables/useAdvisor.js'
 
 // "Ara" düğmesi: WhatsApp bağlantısı varsa "WhatsApp'tan Ara" (yeni sekme), yoksa tel: bağlantısı "Ara".
-const { info, telHref, whatsappUrl } = useAdvisor()
+const props = defineProps({ advisor: { type: Object, default: null } })
+const { info, telHref, whatsappUrl } = useAdvisor(() => props.advisor)
 
 const href = computed(() => whatsappUrl.value ?? telHref.value)
-const label = computed(() => (whatsappUrl.value ? "WhatsApp'tan Ara" : 'Ara'))
-const ariaLabel = computed(() => `${label.value}: ${info.value?.advisorName ?? ''}`.trim())
+const labels = computed(() => callLabels(!!whatsappUrl.value, info.value?.advisorName))
+const label = computed(() => labels.value.label)
+const ariaLabel = computed(() => labels.value.aria)
 </script>
 
 <template>

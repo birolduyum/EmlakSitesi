@@ -22,6 +22,53 @@ namespace Emlak.Api.Data.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Emlak.Api.Domain.Advisor", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("WhatsApp")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Advisors");
+                });
+
             modelBuilder.Entity("Emlak.Api.Domain.AppUser", b =>
                 {
                     b.Property<int>("Id")
@@ -121,6 +168,9 @@ namespace Emlak.Api.Data.Migrations
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AdvisorId")
+                        .HasColumnType("integer");
 
                     b.Property<decimal?>("Aidat")
                         .HasPrecision(18, 2)
@@ -272,6 +322,8 @@ namespace Emlak.Api.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AdvisorId");
+
                     b.HasIndex("City", "District");
 
                     b.HasIndex("Type", "IsDeleted");
@@ -382,6 +434,16 @@ namespace Emlak.Api.Data.Migrations
                     b.HasIndex("TagsId");
 
                     b.ToTable("FeatureTagListing");
+                });
+
+            modelBuilder.Entity("Emlak.Api.Domain.Listing", b =>
+                {
+                    b.HasOne("Emlak.Api.Domain.Advisor", "Advisor")
+                        .WithMany()
+                        .HasForeignKey("AdvisorId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Advisor");
                 });
 
             modelBuilder.Entity("Emlak.Api.Domain.Owner", b =>

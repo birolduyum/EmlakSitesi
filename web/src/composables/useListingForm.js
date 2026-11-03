@@ -13,7 +13,8 @@ const ENUM_DEFAULTS = {
 export const BOOL_FIELDS = ['balcony', 'elevator', 'parking', 'inSite', 'loanEligible', 'swap']
 
 export function emptyForm() {
-  const f = { ...ENUM_DEFAULTS, price: '', deposit: '', aidat: '', tagIds: [] }
+  // advisorId: null = varsayılan danışman (sitedeki ayar).
+  const f = { ...ENUM_DEFAULTS, price: '', deposit: '', aidat: '', tagIds: [], advisorId: null }
   for (const k of [...TEXT_REQUIRED, ...TEXT_OPTIONAL]) f[k] = ''
   for (const k of INT_FIELDS) f[k] = ''
   for (const k of BOOL_FIELDS) f[k] = false
@@ -54,7 +55,8 @@ export function toInput(form) {
     usage: form.usage,
     deed: form.deed,
     kitchen: form.kitchen,
-    tagIds: [...new Set((form.tagIds ?? []).map(Number).filter(Number.isInteger))].sort((a, b) => a - b)
+    tagIds: [...new Set((form.tagIds ?? []).map(Number).filter(Number.isInteger))].sort((a, b) => a - b),
+    advisorId: Number.isInteger(form.advisorId) ? form.advisorId : null
   }
   for (const k of TEXT_REQUIRED) input[k] = trimmed(form[k])
   for (const k of TEXT_OPTIONAL) input[k] = trimmed(form[k]) || null
@@ -95,7 +97,7 @@ export function validate(form) {
 const ERROR_FIELDS = [
   ['Başlık', 'title'], ['İl ', 'city'], ['İlçe', 'district'], ['Oda sayısı', 'rooms'], ['Ev sahibi adı', 'ownerName'],
   ['Ev sahibi telefonu', 'ownerPhone'], ['Mahalle', 'neighborhood'], ['Rozet', 'badge'], ['Fiyat', 'price'],
-  ['Depozito', 'deposit'], ['Aidat', 'aidat'], ['Banyo', 'bathrooms'], ['Brüt', 'grossM2'], ['Net', 'netM2'],
+  ['Seçilen danışman', 'advisorId'], ['Depozito', 'deposit'], ['Aidat', 'aidat'], ['Banyo', 'bathrooms'], ['Brüt', 'grossM2'], ['Net', 'netM2'],
   ['Bulunduğu kat', 'floor'], ['Toplam kat', 'totalFloors'], ['Bina yaşı', 'buildingAge']
 ]
 export function fieldOfError(message) {
@@ -121,6 +123,7 @@ export function fromDetail(d) {
   f.ownerPhone = str(d.owner?.phone)
   f.ownerNote = str(d.owner?.note)
   f.tagIds = (d.tags ?? []).map((t) => t.id)
+  f.advisorId = Number.isInteger(d.advisorId) ? d.advisorId : null
   return f
 }
 

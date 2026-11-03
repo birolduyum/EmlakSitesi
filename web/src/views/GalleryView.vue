@@ -57,11 +57,11 @@ const isWide = (i) => i % 5 === 4
           <ListingHeadline :listing="listing" level="h2" price-first>
             <p class="spec">{{ roomsAndArea }}</p>
           </ListingHeadline>
-          <AdvisorCallLink />
+          <AdvisorCallLink :advisor="listing.advisor" />
         </aside>
       </div>
 
-      <Lightbox v-if="lightboxIndex !== null" :photos="photos" :start-index="lightboxIndex" :opener="lightboxOpener" @close="lightboxIndex = null" />
+      <Lightbox v-if="lightboxIndex !== null" :photos="photos" :start-index="lightboxIndex" :opener="lightboxOpener" :advisor="listing.advisor" @close="lightboxIndex = null" />
     </template>
   </div>
 </template>

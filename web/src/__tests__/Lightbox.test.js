@@ -197,4 +197,16 @@ describe('Lightbox', () => {
     await flushPromises()
     expect(shownSrc()).toBe('/photos/b.jpg')
   })
+  it('uses_the_advisor_prop_over_the_site_default', async () => {
+    api.get.mockResolvedValue({ advisorName: 'Varsayılan', advisorPhone: '+90 555 000 00 00', whatsappUrl: 'https://wa.me/905550000000' })
+    wrapper = mount(Lightbox, {
+      props: { photos, startIndex: 0, advisor: { name: 'Zeynep', phone: '0 532 444 55 66', whatsappUrl: null } },
+      attachTo: document.body
+    })
+    await flushPromises()
+    const a = q('[role="dialog"] .bar a.call')
+    expect(a.getAttribute('href')).toBe('tel:05324445566')
+    expect(a.getAttribute('aria-label')).toBe('Ara: Zeynep')
+    expect(q('a[href="https://wa.me/905550000000"]')).toBeNull()
+  })
 })

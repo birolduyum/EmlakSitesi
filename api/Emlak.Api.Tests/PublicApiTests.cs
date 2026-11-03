@@ -45,7 +45,9 @@ public class PublicApiTests : IClassFixture<ApiFactory>
 
     private static void AssertNoOwnerData(string json)
     {
-        foreach (var forbidden in new[] { OwnerName, OwnerPhone, "999 88 77", OwnerNote, "owner", "phone", "createdBy", "deletedBy", "isDeleted" })
+        // Danışman bloğu (ziyaretçiye açık) bir "phone" anahtarı taşır; bu yüzden genel "phone" kelimesi yerine ev sahibinin GERÇEK
+        // değerleri ve ev sahibine özgü anahtarlar (owner*, ownerPhone) aranır. Danışman numaraları ev sahibininkinden farklıdır.
+        foreach (var forbidden in new[] { OwnerName, OwnerPhone, "999 88 77", "9998877", OwnerNote, "owner", "ownerPhone", "createdBy", "deletedBy", "isDeleted" })
         {
             Assert.DoesNotContain(forbidden, json, StringComparison.OrdinalIgnoreCase);
         }
@@ -266,6 +268,25 @@ public class PublicApiTests : IClassFixture<ApiFactory>
     [InlineData("1234567890123456", "", null)]
     [InlineData("", "", null)]
     [InlineData("1234567", "  ", "https://wa.me/1234567")]
+    // Yerel (Türkiye ulusal) ve uluslararası biçimler wa.me için uluslararası biçime çevrilir.
+    [InlineData("+90 532 111 22 33", "", "https://wa.me/905321112233")]
+    [InlineData("0 532 444 55 66", "", "https://wa.me/905324445566")]
+    [InlineData("0532 444 55 66", "", "https://wa.me/905324445566")]
+    [InlineData("00 90 532 444 55 66", "", "https://wa.me/905324445566")]
+    [InlineData("(0532) 444-55-66", "", "https://wa.me/905324445566")]
+    [InlineData("05324445566", "", "https://wa.me/905324445566")]
+    [InlineData("532 444 55 66", "", "https://wa.me/5324445566")] // 10 hane, baştaki 0 yok: olduğu gibi (README uluslararası biçimi önerir)
+    [InlineData("123", "", null)]
+    [InlineData("abc", "", null)]
+    // Açık (çıplak) WhatsApp numarası da normalize edilir ve 7-15 hane denetiminden geçer; işe yaramazsa telefona düşülür.
+    [InlineData("0532 111 22 33", "1", "https://wa.me/905321112233")]
+    [InlineData("", "1", null)]
+    [InlineData("0532 111 22 33", "abc", "https://wa.me/905321112233")]
+    [InlineData("0532 111 22 33", "0 532 444 55 66", "https://wa.me/905324445566")]
+    [InlineData("0532 111 22 33", "https://wa.me/905551112233", "https://wa.me/905551112233")]
+    [InlineData("0532 111 22 33", "javascript:alert(1)", "https://wa.me/905321112233")] // bağlantı olarak asla geçmez
+    [InlineData("", "javascript:alert(1)", null)]
+    [InlineData("0532 111 22 33", "ftp://x.example/1234567", "https://wa.me/905321112233")]
     public void SiteInfo_WhatsappUrl_DerivesFromPhoneWhenWhatsappEmpty(string? phone, string? whatsapp, string? expected)
     {
         Assert.Equal(expected, SiteInfoFactory.Create("Ad", phone, whatsapp).WhatsappUrl);

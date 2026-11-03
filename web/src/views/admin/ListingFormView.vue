@@ -4,12 +4,15 @@ import { useRoute, useRouter, onBeforeRouteLeave, onBeforeRouteUpdate } from 'vu
 import { api } from '../../api.js'
 import { isAdmin, isLoggingOut } from '../../auth.js'
 import { formatDate } from '../../format.js'
+import { getSiteInfo } from '../../site.js'
+import { useAdvisorList } from '../../composables/useAdvisorList.js'
 import { useListingForm, toInput, validate, fieldOfError } from '../../composables/useListingForm.js'
 import FormSectionBasics from '../../components/admin/FormSectionBasics.vue'
 import FormSectionLocation from '../../components/admin/FormSectionLocation.vue'
 import FormSectionFeatures from '../../components/admin/FormSectionFeatures.vue'
 import FormSectionTags from '../../components/admin/FormSectionTags.vue'
 import FormSectionDescription from '../../components/admin/FormSectionDescription.vue'
+import FormSectionAdvisor from '../../components/admin/FormSectionAdvisor.vue'
 import FormSectionOwner from '../../components/admin/FormSectionOwner.vue'
 import PhotoManager from '../../components/admin/PhotoManager.vue'
 import ConfirmDialog from '../../components/admin/ConfirmDialog.vue'
@@ -20,6 +23,8 @@ const router = useRouter()
 const allowed = isAdmin() // yetki API'de de zorlanır; Saha buraya gelirse listeye döner
 
 const { form, dirty, markClean, load, reset } = useListingForm()
+const { advisors, load: loadAdvisors } = useAdvisorList()
+const defaultAdvisorName = ref('')
 
 const id = computed(() => (route.params.id === undefined ? null : Number(route.params.id)))
 const isNew = computed(() => id.value === null)
@@ -95,6 +100,14 @@ if (!allowed) {
   router.replace('/admin')
 } else {
   loadTags()
+  loadAdvisors()
+  // Varsayılan danışmanın adı yalnızca seçenek etiketi içindir; alınamazsa etiket adsız kalır.
+  Promise.resolve()
+    .then(() => getSiteInfo())
+    .then((info) => {
+      defaultAdvisorName.value = info?.advisorName ?? ''
+    })
+    .catch(() => {})
   watch(id, init, { immediate: true })
 }
 
@@ -281,6 +294,7 @@ const deleteMessage = computed(() => {
           <FormSectionFeatures :form="form" :errors="fieldErrors" />
           <FormSectionTags :form="form" :tags="tags" :load-failed="tagsFailed" @created="onTagCreated" />
           <FormSectionDescription :form="form" :errors="fieldErrors" />
+          <FormSectionAdvisor :form="form" :errors="fieldErrors" :advisors="advisors" :default-name="defaultAdvisorName" />
           <FormSectionOwner :form="form" :errors="fieldErrors" />
         </fieldset>
 

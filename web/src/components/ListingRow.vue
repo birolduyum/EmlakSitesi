@@ -45,7 +45,7 @@ const location = computed(() => [props.listing.city, props.listing.district].fil
       <p class="price">{{ price }}</p>
     </div>
     <div v-if="$slots.actions || showAdvisor" class="side">
-      <slot name="actions"><AdvisorBox /></slot>
+      <slot name="actions"><AdvisorBox :advisor="listing.advisor" /></slot>
     </div>
   </article>
 </template>

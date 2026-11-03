@@ -4,6 +4,7 @@ import { createRouter, createMemoryHistory } from 'vue-router'
 import ListingFormView from '../views/admin/ListingFormView.vue'
 import { api } from '../api.js'
 import { setSession, clearSession } from '../session.js'
+import { resetSiteInfo } from '../site.js'
 
 vi.mock('../api.js', () => ({ api: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn(), upload: vi.fn() } }))
 
@@ -337,5 +338,84 @@ describe('ListingFormView (roles)', () => {
     const { router } = await make('/admin/ilan/5', 'Field')
     expect(router.currentRoute.value.path).toBe('/admin')
     expect(api.get).not.toHaveBeenCalledWith('/api/admin/listings/5')
+  })
+
+  describe('advisor section', () => {
+    const advisors = [
+      { id: 1, name: 'Ayşe Kaya', phone: '+90 532 111 22 33', isActive: true },
+      { id: 2, name: 'Zeynep Yalçın', phone: '+90 532 222 33 44', isActive: true },
+      { id: 3, name: 'Eski Kişi', phone: '+90 532 333 44 55', isActive: false }
+    ]
+    beforeEach(() => {
+      resetSiteInfo()
+      api.get.mockImplementation((path) => {
+        if (path === '/api/tags') return Promise.resolve(tags)
+        if (path === '/api/admin/advisors') return Promise.resolve(advisors)
+        if (path === '/api/site') return Promise.resolve({ advisorName: 'Site Danışmanı', advisorPhone: '0555', whatsappUrl: null })
+        if (/^\/api\/admin\/listings\/\d+$/.test(path)) return getDetail(path)
+        return Promise.reject({ status: 404 })
+      })
+    })
+    const options = (w) => w.findAll('select[name="advisorId"] option').map((o) => o.text())
+
+    it('offers the default first, then only active advisors', async () => {
+      const { w } = await make('/admin/ilan/yeni')
+      expect(w.findAll('h2').some((h) => h.text() === 'Danışman')).toBe(true)
+      expect(options(w)).toEqual(['Varsayılan danışman (Site Danışmanı)', 'Ayşe Kaya', 'Zeynep Yalçın'])
+      expect(w.text()).toContain('Seçilmezse sitedeki varsayılan danışman görünür.')
+      expect(w.find('select[name="advisorId"]').element.value).toBe('')
+    })
+    it('new listing: default selection sends advisorId null, a choice sends the number', async () => {
+      api.post.mockResolvedValue(detail({ id: 9 }))
+      const { w } = await make('/admin/ilan/yeni')
+      await fillBasics(w)
+      await w.find('form').trigger('submit')
+      await flushPromises()
+      expect(api.post.mock.calls[0][1].advisorId).toBeNull()
+
+      api.post.mockClear()
+      const second = await make('/admin/ilan/yeni')
+      await fillBasics(second.w)
+      await second.w.find('select[name="advisorId"]').setValue('2')
+      await second.w.find('form').trigger('submit')
+      await flushPromises()
+      expect(api.post.mock.calls[0][1].advisorId).toBe(2)
+    })
+    it('edit: preselects the listing advisor and can reset to the default (null)', async () => {
+      getDetail = async () => detail({ advisorId: 1 })
+      api.put.mockResolvedValue(detail({ advisorId: null }))
+      const { w } = await make('/admin/ilan/5')
+      expect(w.find('select[name="advisorId"]').element.value).toBe('1')
+      await w.find('select[name="advisorId"]').setValue('')
+      await w.find('form').trigger('submit')
+      await flushPromises()
+      expect(api.put.mock.calls[0][1].advisorId).toBeNull()
+    })
+    it('edit: an inactive current advisor stays selectable and is labelled (pasif)', async () => {
+      getDetail = async () => detail({ advisorId: 3 })
+      api.put.mockResolvedValue(detail({ advisorId: 3 }))
+      const { w } = await make('/admin/ilan/5')
+      expect(options(w)).toEqual(['Varsayılan danışman (Site Danışmanı)', 'Eski Kişi (pasif)', 'Ayşe Kaya', 'Zeynep Yalçın'])
+      expect(w.find('select[name="advisorId"]').element.value).toBe('3')
+      await w.find('form').trigger('submit')
+      await flushPromises()
+      expect(api.put.mock.calls[0][1].advisorId).toBe(3)
+    })
+    it('changing the advisor makes the form dirty (leave guard)', async () => {
+      getDetail = async () => detail({ advisorId: 1 })
+      const { w, router } = await make('/admin/ilan/5')
+      await w.find('select[name="advisorId"]').setValue('2')
+      router.push('/admin')
+      await flushPromises()
+      expect(w.find('[role="dialog"]').text()).toContain('Kaydedilmemiş değişiklikler var')
+    })
+    it('shows a server advisor error next to the field', async () => {
+      api.post.mockRejectedValue({ status: 400, body: { errors: ['Seçilen danışman pasif; yeni ilana atanamaz.'] } })
+      const { w } = await make('/admin/ilan/yeni')
+      await fillBasics(w)
+      await w.find('form').trigger('submit')
+      await flushPromises()
+      expect(w.find('#f-advisorId-err').text()).toContain('pasif')
+    })
   })
 })

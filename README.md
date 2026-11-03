@@ -31,7 +31,7 @@ cp .env.example .env
 | `POSTGRES_PASSWORD` | Veritabanı parolası. Zorunludur; boşsa `docker compose` hata verir. |
 | `JWT_KEY` | Oturum anahtarı, **en az 32 karakter**, tahmin edilemez olmalı. Zorunludur. |
 | `Users__0..2__Username / Password / Role` | Üç hesap. 0 ve 1 `Admin`, 2 `Field` (saha) rolündedir. Parolalar veritabanında yalnızca hash olarak saklanır. Hesap yönetim ekranı yoktur; hesaplar buradan tanımlanır. |
-| `Advisor__Name / Phone / WhatsApp` | İlan sayfalarındaki danışman kutusunda görünen ad ve telefonlar. `Advisor__WhatsApp` boşsa WhatsApp bağlantısı `Advisor__Phone` rakamlarından (`https://wa.me/<rakamlar>`, 7-15 hane) türetilir; ikisi de yoksa düğmeler `tel:` yedeğine döner. WhatsApp'ta doğrudan sesli arama başlatan bir bağlantı yoktur: "WhatsApp'tan Ara" yalnızca sohbeti açar, arama simgesine ziyaretçi dokunur. |
+| `Advisor__Name / Phone / WhatsApp` | **Varsayılan danışman**: ilana özel danışman atanmamış ilanlarda görünen ad ve telefonlar (bkz. "Danışmanlar"). `Advisor__WhatsApp` boşsa WhatsApp bağlantısı `Advisor__Phone` rakamlarından (`https://wa.me/<rakamlar>`, 7-15 hane) türetilir; ikisi de yoksa düğmeler `tel:` yedeğine döner. WhatsApp'ta doğrudan sesli arama başlatan bir bağlantı yoktur: "WhatsApp'tan Ara" yalnızca sohbeti açar, arama simgesine ziyaretçi dokunur. |
 | `Seed__Sample` | Varsayılan `true`: veritabanında hiç ilan yokken örnek ilanlar ve yer tutucu fotoğraflar eklenir. **Üretimde `false` yapın** (`.env` içine `Seed__Sample=false` yazın). |
 | `RateLimit__LoginPerMinute` | İsteğe bağlı. Giriş denemesi sınırı: istemci IP'si başına dakikada en çok bu kadar deneme (varsayılan `10`). Aşılırsa API `429` ve "Çok fazla deneme. Bir dakika sonra tekrar deneyin." döner. |
 
@@ -64,10 +64,17 @@ Site ve yönetim ekranı yalnızca 8081 üzerinden kullanılır; nginx `/api/` v
 | İlan ekleme, düzenleme, silme, geri alma | hayır | hayır | evet |
 | Fotoğraf yükleme, silme, sıralama | hayır | hayır | evet |
 | Kur (USD/EUR) belirleme | hayır | hayır | evet |
+| Danışmanları yönetme (ekleme, düzenleme, pasifleştirme) ve ilana atama | hayır | hayır | evet |
 | Ev gösterme kaydı alma ve kapatma | hayır | evet | evet |
 | Gösterme kayıtlarını ve raporunu görme | hayır | hayır | evet |
 
 Yetki kontrolü API'de yapılır: girişsiz istek 401, yetkisiz rol 403 alır. İlan silme yalnızca yumuşak silmedir; kayıt ve fotoğraf dosyaları silinmez, yönetici silinen ilanı geri alabilir.
+
+## Danışmanlar
+
+Yönetim menüsündeki **Danışmanlar** ekranından (yalnızca Yönetici) danışman eklenir, düzenlenir, pasifleştirilir/etkinleştirilir. Danışman silinmez: ilanlar ona bağlı olduğundan yalnızca pasifleştirilir; pasif danışman mevcut ilanlarında görünmeye devam eder ama yeni bir ilana atanamaz. İlan formundaki **Danışman** bölümünden her ilana bir danışman seçilir; seçilmezse `.env` içindeki `Advisor__*` ayarlarıyla belirlenen **varsayılan danışman** görünür. Sitede liste satırı, ilan sayfası, fotoğraf galerisi ve büyük fotoğraf görünümü o ilanın danışmanını gösterir. Telefon numaraları Türkiye ulusal biçiminde (`0 5xx …`) ya da uluslararası biçimde (`+90 5xx …`) yazılabilir; WhatsApp bağlantısı her zaman uluslararası biçimde (`https://wa.me/905…`) kurulur, görünen telefon yazıldığı gibi kalır. Yönetim ilan listesi danışmana göre süzülebilir ("İlanlarını gör" bağlantısı da bunu kullanır).
+
+**Gizlilik:** danışmanın adı, telefonu ve WhatsApp bağlantısı ziyaretçiye açıktır (zaten ilanda gösterilmek içindir). Ev sahibi bilgileri ise ziyaretçi ve saha rolüne giden yanıtlarda hiç bulunmaz. Örnek veri (`Seed__Sample`) üç kurgusal danışman ve her dördüncü ilanda danışmansız (varsayılan) bir ilan içerir.
 
 ## Veriler: nerede durur, yedek ve sıfırlama
 

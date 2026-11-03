@@ -1,3 +1,4 @@
+using Emlak.Api.Advisors;
 using Emlak.Api.Auth;
 using Emlak.Api.Data;
 using Emlak.Api.Listings;
@@ -47,6 +48,7 @@ app.MapAdminListingEndpoints();
 app.MapPhotoEndpoints();
 app.MapShowingEndpoints();
 app.MapRateEndpoints();
+app.MapAdvisorEndpoints();
 
 if (app.Environment.IsEnvironment("Testing"))
 {

@@ -29,17 +29,19 @@ describe('router guard', () => {
     expect(decodeURIComponent(await go('/admin/ilan/yeni'))).toBe('/admin/giris?redirect=/admin/ilan/yeni')
     expect(decodeURIComponent(await go('/admin/gosterim'))).toBe('/admin/giris?redirect=/admin/gosterim')
   })
-  it('field user reaches /admin but not rapor/kur', async () => {
+  it('field user reaches /admin but not rapor/kur/danismanlar', async () => {
     setSession('t', { username: 'saha', role: 'Field' })
     expect(await go('/admin')).toBe('/admin')
     expect(await go('/admin/gosterim')).toBe('/admin/gosterim')
     expect(await go('/admin/rapor')).toBe('/admin')
     expect(await go('/admin/kur')).toBe('/admin')
+    expect(await go('/admin/danismanlar')).toBe('/admin')
   })
   it('admin user reaches rapor and kur', async () => {
     setSession('t', { username: 'a', role: 'Admin' })
     expect(await go('/admin/rapor')).toBe('/admin/rapor')
     expect(await go('/admin/kur')).toBe('/admin/kur')
+    expect(await go('/admin/danismanlar')).toBe('/admin/danismanlar')
   })
   it('corrupt stored user is treated as no role', async () => {
     localStorage.setItem('emlak_token', 't')

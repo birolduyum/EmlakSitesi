@@ -6,6 +6,7 @@ namespace Emlak.Api.Data;
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
     public DbSet<Listing> Listings => Set<Listing>();
+    public DbSet<Advisor> Advisors => Set<Advisor>();
     public DbSet<Owner> Owners => Set<Owner>();
     public DbSet<Photo> Photos => Set<Photo>();
     public DbSet<FeatureTag> FeatureTags => Set<FeatureTag>();
@@ -42,9 +43,21 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(x => x.Owner).WithOne().HasForeignKey<Owner>(o => o.ListingId).IsRequired().OnDelete(DeleteBehavior.Restrict);
             e.HasMany(x => x.Photos).WithOne().HasForeignKey(p => p.ListingId).OnDelete(DeleteBehavior.Restrict);
             e.HasMany(x => x.Tags).WithMany();
+            e.HasOne(x => x.Advisor).WithMany().HasForeignKey(x => x.AdvisorId).OnDelete(DeleteBehavior.Restrict);
 
             e.HasIndex(x => new { x.Type, x.IsDeleted });
             e.HasIndex(x => new { x.City, x.District });
+            e.HasIndex(x => x.AdvisorId);
+        });
+
+        b.Entity<Advisor>(e =>
+        {
+            e.Property(x => x.Name).HasMaxLength(100);
+            e.Property(x => x.Phone).HasMaxLength(30);
+            e.Property(x => x.WhatsApp).HasMaxLength(200);
+            e.Property(x => x.IsActive).HasDefaultValue(true);
+            e.Property(x => x.CreatedBy).HasMaxLength(100);
+            e.Property(x => x.UpdatedBy).HasMaxLength(100);
         });
 
         b.Entity<Owner>(e =>

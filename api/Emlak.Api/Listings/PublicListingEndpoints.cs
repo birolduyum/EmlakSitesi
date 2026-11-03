@@ -12,27 +12,30 @@ public static class PublicListingEndpoints
 
     public static IEndpointRouteBuilder MapPublicListingEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapGet("/api/listings", async ([AsParameters] ListingQuery q, ListingSearchService search, CancellationToken ct) =>
+        app.MapGet("/api/listings", async ([AsParameters] ListingQuery q, ListingSearchService search, IConfiguration config, CancellationToken ct) =>
         {
             // Tür verilmezse iki tür birden listelenir. Ziyaretçi yalnızca aktif ilanı görür, sahip aramasını kullanamaz; sayfa sınırları serviste taşmadan önce kıstırılır.
             var safe = q with
             {
                 Status = ListingStatus.Active,
                 OwnerText = null,
+                AdvisorId = null,
                 Page = Math.Clamp(q.Page, 1, MaxPage),
                 PageSize = Math.Clamp(q.PageSize, 1, MaxPageSize),
             };
             var (items, total) = await search.SearchAsync(safe, includeOwnerSearch: false, ct);
+            var defaultAdvisor = SiteInfoFactory.DefaultAdvisor(config);
             return Results.Ok(new PagedResult<PublicListingSummary>(
-                items.Select(PublicMapper.ToSummary).ToList(), total, safe.Page, safe.PageSize));
+                items.Select(l => PublicMapper.ToSummary(l, defaultAdvisor)).ToList(), total, safe.Page, safe.PageSize));
         }).AllowAnonymous();
 
         app.MapGet("/api/listings/filters", async ([FromQuery] ListingType? type, ListingSearchService search, CancellationToken ct)
             => Results.Ok(await search.GetFilterOptionsAsync(type, ct))).AllowAnonymous();
 
-        app.MapGet("/api/listings/{id:int}", async (int id, AppDbContext db, CancellationToken ct) =>
+        app.MapGet("/api/listings/{id:int}", async (int id, AppDbContext db, IConfiguration config, CancellationToken ct) =>
         {
             var listing = await db.Listings.AsNoTracking()
+                .Include(l => l.Advisor)
                 .Include(l => l.Photos)
                 .Include(l => l.Tags)
                 .AsSplitQuery()
@@ -43,7 +46,7 @@ public static class PublicListingEndpoints
             }
 
             var showingCount = await db.Showings.CountAsync(s => s.ListingId == id, ct);
-            return Results.Ok(PublicMapper.ToDetail(listing, showingCount));
+            return Results.Ok(PublicMapper.ToDetail(listing, showingCount, SiteInfoFactory.DefaultAdvisor(config)));
         }).AllowAnonymous();
 
         app.MapGet("/api/tags", async (AppDbContext db, CancellationToken ct) =>
@@ -54,7 +57,7 @@ public static class PublicListingEndpoints
 
         app.MapGet("/api/site", (IConfiguration config) =>
         {
-            return Results.Ok(SiteInfoFactory.Create(config["Advisor:Name"], config["Advisor:Phone"], config["Advisor:WhatsApp"]));
+            return Results.Ok(SiteInfoFactory.FromConfig(config));
         }).AllowAnonymous();
 
         return app;

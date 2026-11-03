@@ -16,7 +16,7 @@ async function make(role) {
     routes: [
       { path: '/admin/giris', component: { template: '<p>giris</p>' } },
       { path: '/admin', component: AdminLayout, children: [{ path: '', component: { template: '<p>liste</p>' } }] },
-      ...['gosterim', 'rapor', 'kur'].map((p) => ({ path: `/admin/${p}`, component: { template: '<p>x</p>' } }))
+      ...['gosterim', 'rapor', 'danismanlar', 'kur'].map((p) => ({ path: `/admin/${p}`, component: { template: '<p>x</p>' } }))
     ]
   })
   router.push('/admin')
@@ -30,7 +30,7 @@ describe('AdminLayout', () => {
   it('admin sees all menu items, user name and role label', async () => {
     const { w } = await make('Admin')
     const menu = w.find('nav[aria-label="Yönetim menüsü"]').text()
-    for (const item of ['İlanlar', 'Gösterme', 'Rapor', 'Kur']) expect(menu).toContain(item)
+    for (const item of ['İlanlar', 'Gösterme', 'Rapor', 'Danışmanlar', 'Kur']) expect(menu).toContain(item)
     expect(w.find('[data-testid="who"]').text()).toBe('ayse (Yönetici)')
     expect(w.text()).toContain('liste')
   })
@@ -40,6 +40,7 @@ describe('AdminLayout', () => {
     expect(menu).toContain('İlanlar')
     expect(menu).toContain('Gösterme')
     expect(menu).not.toContain('Rapor')
+    expect(menu).not.toContain('Danışmanlar')
     expect(menu).not.toContain('Kur')
     expect(w.find('[data-testid="who"]').text()).toBe('ayse (Saha)')
   })

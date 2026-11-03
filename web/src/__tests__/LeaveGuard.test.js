@@ -41,6 +41,7 @@ async function make() {
           { path: 'ilan/:id', component: ListingFormView },
           { path: 'gosterim', component: { template: '<p>g</p>' } },
           { path: 'rapor', component: { template: '<p>r</p>' } },
+          { path: 'danismanlar', component: { template: '<p>d</p>' } },
           { path: 'kur', component: { template: '<p>k</p>' } }
         ]
       }

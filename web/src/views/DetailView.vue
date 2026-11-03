@@ -131,6 +131,7 @@ const rows = computed(() => {
         :photos="listing.photoUrls ?? []"
         :start-index="lightboxIndex"
         :opener="lightboxOpener"
+        :advisor="listing.advisor"
         @close="lightboxIndex = null"
       />
     </template>

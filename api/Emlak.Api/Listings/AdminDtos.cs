@@ -11,7 +11,8 @@ public record AdminOwner(string Name, string Phone, string? Note);
 public record AdminListingSummary(
     int Id, string Title, string? Badge, ListingType Type, decimal Price, Currency Currency,
     string City, string District, string Rooms, int GrossM2, int Floor, DateTime CreatedAt, string[] PhotoUrls,
-    string CreatedBy, bool IsDeleted, DateTime? DeletedAt, string? DeletedBy, AdminOwner Owner);
+    string CreatedBy, bool IsDeleted, DateTime? DeletedAt, string? DeletedBy, AdminOwner Owner,
+    int? AdvisorId, string? AdvisorName);
 
 public record AdminListingDetail(
     int Id, string Title, string? Badge, ListingType Type, decimal Price, Currency Currency,
@@ -23,7 +24,8 @@ public record AdminListingDetail(
     AdminOwner Owner,
     string CreatedBy, DateTime? UpdatedAt, string? UpdatedBy,
     bool IsDeleted, DateTime? DeletedAt, string? DeletedBy, DateTime? RestoredAt, string? RestoredBy,
-    PhotoDto[] Photos);
+    PhotoDto[] Photos,
+    int? AdvisorId);
 
 /// <summary>Oluşturma/güncelleme gövdesi. Alanlar boş bırakılabilir; eksikler <see cref="ListingValidator"/> ile 400 olur.</summary>
 public record AdminListingInput
@@ -61,6 +63,8 @@ public record AdminListingInput
     public string? OwnerPhone { get; init; }
     public string? OwnerNote { get; init; }
     public int[]? TagIds { get; init; }
+    /// <summary>null = varsayılan danışman (sitedeki ayar).</summary>
+    public int? AdvisorId { get; init; }
 }
 
 public record CreateTagRequest(string? Name, TagGroup? Group);
@@ -72,11 +76,12 @@ public static class AdminMapper
     public static AdminListingSummary ToSummary(Listing l) => new(
         l.Id, l.Title, l.Badge, l.Type, l.Price, l.Currency, l.City, l.District, l.Rooms, l.GrossM2, l.Floor, l.CreatedAt,
         PublicMapper.PhotoUrls(l),
-        l.CreatedBy, l.IsDeleted, l.DeletedAt, l.DeletedBy, ToOwner(l.Owner));
+        l.CreatedBy, l.IsDeleted, l.DeletedAt, l.DeletedBy, ToOwner(l.Owner),
+        l.AdvisorId, l.Advisor?.Name);
 
     public static AdminListingDetail ToDetail(Listing l, int showingCount)
     {
-        var p = PublicMapper.ToDetail(l, showingCount);
+        var p = PublicMapper.ToDetail(l, showingCount, null);
         return new AdminListingDetail(
             p.Id, p.Title, p.Badge, p.Type, p.Price, p.Currency, p.City, p.District, p.Rooms, p.GrossM2, p.Floor, p.CreatedAt, p.PhotoUrls,
             p.Deposit, p.Aidat, p.Neighborhood, p.Bathrooms, p.NetM2, p.TotalFloors, p.BuildingAge,
@@ -88,6 +93,7 @@ public static class AdminMapper
             l.IsDeleted, l.DeletedAt, l.DeletedBy, l.RestoredAt, l.RestoredBy,
             // Yönetici fotoğraf yönetimi için kimlikli liste (ziyaretçi cevabında yalnızca adresler vardır).
             l.Photos.OrderBy(x => x.SortOrder).ThenBy(x => x.Id)
-                .Select(x => new PhotoDto(x.Id, PhotoUrl.For(x.FilePath), x.SortOrder)).ToArray());
+                .Select(x => new PhotoDto(x.Id, PhotoUrl.For(x.FilePath), x.SortOrder)).ToArray(),
+            l.AdvisorId);
     }
 }

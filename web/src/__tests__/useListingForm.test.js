@@ -6,7 +6,7 @@ const INPUT_KEYS = [
   'title', 'badge', 'type', 'price', 'currency', 'deposit', 'aidat', 'city', 'district', 'neighborhood', 'rooms',
   'bathrooms', 'grossM2', 'netM2', 'floor', 'totalFloors', 'buildingAge', 'heating', 'furnishing', 'usage', 'deed',
   'kitchen', 'balcony', 'elevator', 'parking', 'inSite', 'loanEligible', 'swap', 'description', 'ownerName',
-  'ownerPhone', 'ownerNote', 'tagIds'
+  'ownerPhone', 'ownerNote', 'tagIds', 'advisorId'
 ].sort()
 
 const filled = (over = {}) => ({

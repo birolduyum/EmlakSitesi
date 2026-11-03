@@ -25,6 +25,27 @@ public class SampleDataTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task Seed_CreatesThreeAdvisors_AssignedToSomeListings_WithNumbersDifferentFromOwners()
+    {
+        await SeedAsync();
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var advisors = await db.Advisors.AsNoTracking().ToListAsync();
+        var listings = await db.Listings.AsNoTracking().ToListAsync();
+        var owners = await db.Owners.AsNoTracking().ToListAsync();
+
+        Assert.Equal(3, advisors.Count);
+        Assert.All(advisors, a => Assert.True(a.IsActive));
+        Assert.Contains(advisors, a => a.WhatsApp is null);
+        Assert.Equal(3, listings.Where(l => l.AdvisorId is not null).Select(l => l.AdvisorId).Distinct().Count());
+        Assert.Contains(listings, l => l.AdvisorId is null && !l.IsDeleted); // varsayılan danışmanı gösteren ilan
+        var digits = (string s) => new string(s.Where(char.IsAsciiDigit).ToArray());
+        Assert.Empty(advisors.Select(a => digits(a.Phone)).Intersect(owners.Select(o => digits(o.Phone))));
+        Assert.Empty(advisors.Select(a => a.Name).Intersect(owners.Select(o => o.Name)));
+    }
+
+    [Fact]
     public async Task Seed_CreatesVariedListings_AndIsIdempotent()
     {
         await SeedAsync();
@@ -144,7 +165,7 @@ public class SampleDataTests : IClassFixture<ApiFactory>
         var json = satilik + kiralik;
 
         Assert.DoesNotContain(deletedTitle, json);
-        foreach (var s in ownerStrings.Concat(["owner", "phone", "createdBy", "deletedBy", "isDeleted"]))
+        foreach (var s in ownerStrings.Concat(["owner", "ownerPhone", "createdBy", "deletedBy", "isDeleted"]))
         {
             Assert.DoesNotContain(s, json, StringComparison.OrdinalIgnoreCase);
         }
