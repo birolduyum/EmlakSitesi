@@ -7,7 +7,7 @@
 
 ## Git
 - Depo yerelde (`main`), `origin` = private `github.com/birolduyum/EmlakSitesi` (kişisel hesap; Karasoy değil).
-- Bütün iş görev görev atomic commit olarak yerel `main` dalında (19 commit). **Push yapıldı (03.11.2026, `origin/main`)**.
+- Bütün iş atomic commit olarak `main` dalında; görev 17–20 (filtre uygula düğmesi, WhatsApp düğmeleri, danışmanlar, DateTimeOffset) dahil, 03.11.2026 itibarıyla `origin/main`e push edildi.
 
 ## Dosyalar
 - Tasarım: `docs/superpowers/specs/2026-11-02-emlak-sitesi-design.md`; plan: `docs/superpowers/plans/2026-11-02-emlak-sitesi.md`
@@ -20,4 +20,4 @@
 
 ## Kullanıcıya açık kalanlar
 - Fiyat çubuğu (slider) yapılmadı; yalnızca En Az/En Fazla kutuları (isteğe bağlı sonraki iş).
-- Commit/push talimatı.
+- Geliştirme veritabanında iki pasif test danışmanı duruyor ("Test Danışman Bir (düzenlendi)", "Test Danışman İki"); danışman silinemediği için kalıyor.
