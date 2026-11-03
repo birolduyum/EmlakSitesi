@@ -1,10 +1,11 @@
 services:
   db:
+    restart: unless-stopped
     image: postgres:16
     environment:
       POSTGRES_DB: emlak
       POSTGRES_USER: emlak
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD .env dosyasında tanımlı olmalı}
     volumes:
       - dbdata:/var/lib/postgresql/data
     healthcheck:
@@ -14,13 +15,14 @@ services:
       retries: 10
 
   api:
+    restart: unless-stopped
     build: ./api
     depends_on:
       db:
         condition: service_healthy
     environment:
-      ConnectionStrings__Default: Host=db;Database=emlak;Username=emlak;Password=${POSTGRES_PASSWORD}
-      Jwt__Key: ${JWT_KEY}
+      ConnectionStrings__Default: Host=db;Database=emlak;Username=emlak;Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD .env dosyasında tanımlı olmalı}
+      Jwt__Key: ${JWT_KEY:?JWT_KEY .env dosyasında tanımlı olmalı}
       Users__0__Username: ${Users__0__Username}
       Users__0__Password: ${Users__0__Password}
       Users__0__Role: ${Users__0__Role}
@@ -33,14 +35,20 @@ services:
       Advisor__Name: ${Advisor__Name}
       Advisor__Phone: ${Advisor__Phone}
       Advisor__WhatsApp: ${Advisor__WhatsApp}
-      Seed__Sample: "true"
+      Seed__Sample: ${Seed__Sample:-true}
       Photos__Path: /data/photos
     volumes:
       - photos:/data/photos
     ports:
       - "8080:8080"
 
-  # web servisi Task 15'te eklenir
+  web:
+    build: ./web
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "8081:80"
 
 volumes:
   dbdata:
