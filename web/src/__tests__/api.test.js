@@ -108,3 +108,13 @@ describe('errors and bodies', () => {
     expect(init.headers['Content-Type']).toBeUndefined()
   })
 })
+
+describe('network failure', () => {
+  it('turns a rejected fetch into ApiError with status 0 and null body', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('Failed to fetch') }))
+    const err = await api.get('/x').catch((e) => e)
+    expect(err).toBeInstanceOf(ApiError)
+    expect(err.status).toBe(0)
+    expect(err.body).toBeNull()
+  })
+})

@@ -42,7 +42,12 @@ async function request(method, path, { params, body, form } = {}) {
     init.body = JSON.stringify(body)
   }
 
-  const res = await fetch(path + buildQuery(params), init)
+  let res
+  try {
+    res = await fetch(path + buildQuery(params), init)
+  } catch {
+    throw new ApiError(0, null)
+  }
 
   const text = await res.text()
   let data = null
