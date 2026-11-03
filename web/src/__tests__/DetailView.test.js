@@ -164,22 +164,39 @@ describe('DetailView', () => {
     const { w } = await make()
     expect(w.find('[role="tablist"]').exists()).toBe(false)
   })
-  it('Mesaj Gönder is hidden when whatsappUrl is null, Ara is tel:', async () => {
+  it('fallback_to_tel_when_whatsapp_missing', async () => {
     api.get.mockImplementation((p) => (p === '/api/site' ? Promise.resolve({ ...site, whatsappUrl: null }) : listingImpl(p)))
     const { w } = await make()
     expect(w.text()).not.toContain('Mesaj Gönder')
-    expect(w.find('a[href="tel:+905321112233"]').exists()).toBe(true)
+    const ara = w.findAll('a').find((x) => x.text() === 'Ara')
+    expect(ara.attributes('href')).toBe('tel:+905321112233')
+    expect(ara.attributes('target')).toBeUndefined()
+    expect(w.text()).toContain('+90 532 111 22 33')
   })
-  it('accepts an https whatsappUrl', async () => {
+  it('detail_card_buttons_use_whatsapp_with_prefilled_text', async () => {
     api.get.mockImplementation((p) => (p === '/api/site' ? Promise.resolve({ ...site, whatsappUrl: 'https://wa.me/905320000001' }) : listingImpl(p)))
     const { w } = await make()
-    expect(w.findAll('a').find((x) => x.text() === 'Mesaj Gönder').attributes('href')).toBe('https://wa.me/905320000001')
+    const call = w.findAll('a').find((x) => x.text() === "WhatsApp'tan Ara")
+    const msg = w.findAll('a').find((x) => x.text() === "WhatsApp'tan Mesaj Gönder")
+    expect(call.attributes('href')).toBe('https://wa.me/905320000001')
+    expect(call.attributes('aria-label')).toBe("WhatsApp'tan Ara: Ayşe Yılmaz")
+    const url = new URL(msg.attributes('href'))
+    expect(url.origin + url.pathname).toBe('https://wa.me/905320000001')
+    expect(url.searchParams.get('text')).toBe('Merhaba, Deniz manzaralı 3+1 (İlan No: 7) hakkında bilgi almak istiyorum.')
+    expect(msg.attributes('href')).not.toBe(call.attributes('href'))
+    for (const a of [call, msg]) {
+      expect(a.attributes('target')).toBe('_blank')
+      expect(a.attributes('rel')).toBe('noopener noreferrer')
+    }
+    expect(w.text()).toContain('+90 532 111 22 33')
   })
-  it.each(['javascript:alert(1)', 'data:text/html,<script>alert(1)</script>', 'ftp://x'])('rejects unsafe whatsappUrl %s', async (bad) => {
+  it.each(['javascript:alert(1)', 'data:text/html,<script>alert(1)</script>', 'ftp://x'])('javascript_url_still_rejected (%s)', async (bad) => {
     api.get.mockImplementation((p) => (p === '/api/site' ? Promise.resolve({ ...site, whatsappUrl: bad }) : listingImpl(p)))
     const { w } = await make()
     expect(w.text()).not.toContain('Mesaj Gönder')
+    expect(w.text()).not.toContain("WhatsApp'tan")
     expect(w.find(`a[href="${bad}"]`).exists()).toBe(false)
+    expect(w.findAll('a').find((x) => x.text() === 'Ara').attributes('href')).toBe('tel:+905321112233')
   })
   it('uses updatedAt for İlan Güncelleme Tarihi when present', async () => {
     listingImpl = async () => detail({ updatedAt: new Date(2026, 9, 5, 12).toISOString() })
@@ -200,13 +217,6 @@ describe('DetailView', () => {
     expect(after.map((t) => t.attributes('tabindex'))).toEqual(['-1', '0'])
     expect(w.find('[role="tabpanel"]').text()).toContain('Metroya yakın')
     expect(w.find('[role="tabpanel"]').attributes('aria-labelledby')).toBe(after[1].attributes('id'))
-  })
-  it('Mesaj Gönder opens WhatsApp in a new tab safely', async () => {
-    const { w } = await make()
-    const a = w.findAll('a').find((x) => x.text() === 'Mesaj Gönder')
-    expect(a.attributes('href')).toBe(site.whatsappUrl)
-    expect(a.attributes('target')).toBe('_blank')
-    expect(a.attributes('rel')).toBe('noopener noreferrer')
   })
   it('clicking a photo opens the Lightbox at that index', async () => {
     const { w } = await make()

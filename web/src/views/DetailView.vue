@@ -108,7 +108,7 @@ const rows = computed(() => {
           <ListingHeadline :listing="listing" />
         </div>
         <div class="side">
-          <AdvisorCard :showing-count="listing.showingCount ?? 0" />
+          <AdvisorCard :showing-count="listing.showingCount ?? 0" :listing="listing" />
         </div>
         <div class="rest">
           <SpecGrid :listing="listing" />

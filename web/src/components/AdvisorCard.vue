@@ -1,11 +1,16 @@
 <script setup>
-import { useAdvisor } from '../composables/useAdvisor.js'
+import { computed } from 'vue'
+import { useAdvisor, whatsappMessageUrl } from '../composables/useAdvisor.js'
 
-defineProps({
-  showingCount: { type: Number, default: 0 }
+const props = defineProps({
+  showingCount: { type: Number, default: 0 },
+  listing: { type: Object, default: null }
 })
 
 const { info, telHref, whatsappUrl } = useAdvisor()
+// Aynı numara; ikinci düğme ilana özel hazır mesajla açılır. WhatsApp yoksa tel: yedeği ve mesaj düğmesi gizli.
+const messageUrl = computed(() => whatsappMessageUrl(whatsappUrl.value, props.listing))
+const callAria = computed(() => `${whatsappUrl.value ? "WhatsApp'tan Ara" : 'Ara'}: ${info.value?.advisorName ?? ''}`.trim())
 </script>
 
 <template>
@@ -16,8 +21,17 @@ const { info, telHref, whatsappUrl } = useAdvisor()
       <span v-if="info.advisorPhone" class="phone">{{ info.advisorPhone }}</span>
     </div>
     <div class="actions">
-      <a v-if="telHref" :href="telHref" class="btn call">Ara</a>
-      <a v-if="whatsappUrl" :href="whatsappUrl" class="btn secondary" target="_blank" rel="noopener noreferrer">Mesaj Gönder</a>
+      <a
+        v-if="whatsappUrl"
+        :href="whatsappUrl"
+        class="btn call"
+        :aria-label="callAria"
+        target="_blank"
+        rel="noopener noreferrer"
+        >WhatsApp'tan Ara</a
+      >
+      <a v-else-if="telHref" :href="telHref" class="btn call" :aria-label="callAria">Ara</a>
+      <a v-if="messageUrl" :href="messageUrl" class="btn secondary" target="_blank" rel="noopener noreferrer">WhatsApp'tan Mesaj Gönder</a>
     </div>
     <p v-if="showingCount > 0" class="showing">Bu ilan {{ showingCount }} kez gösterildi</p>
   </aside>

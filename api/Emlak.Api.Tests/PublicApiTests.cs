@@ -1,4 +1,5 @@
 using System.Net;
+using Emlak.Api.Listings;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Emlak.Api.Data;
@@ -254,5 +255,34 @@ public class PublicApiTests : IClassFixture<ApiFactory>
         Assert.True(site.TryGetProperty("advisorName", out _));
         Assert.True(site.TryGetProperty("advisorPhone", out _));
         Assert.True(site.TryGetProperty("whatsappUrl", out _));
+    }
+
+    [Theory]
+    [InlineData("+90 (555) 000-00 00", "", "https://wa.me/905550000000")]
+    [InlineData("+90 (555) 000-00 00", null, "https://wa.me/905550000000")]
+    [InlineData("+90 555 000 00 00", "905321112233", "https://wa.me/905321112233")]
+    [InlineData("+90 555 000 00 00", "https://wa.me/905321112233?x=1", "https://wa.me/905321112233?x=1")]
+    [InlineData("123456", "", null)]
+    [InlineData("1234567890123456", "", null)]
+    [InlineData("", "", null)]
+    [InlineData("1234567", "  ", "https://wa.me/1234567")]
+    public void SiteInfo_WhatsappUrl_DerivesFromPhoneWhenWhatsappEmpty(string? phone, string? whatsapp, string? expected)
+    {
+        Assert.Equal(expected, SiteInfoFactory.Create("Ad", phone, whatsapp).WhatsappUrl);
+    }
+
+    [Fact]
+    public async Task Site_Endpoint_DerivesWhatsappFromConfiguredPhone()
+    {
+        _ = _factory.Server;
+        var client = _factory.WithWebHostBuilder(b =>
+        {
+            b.UseSetting("Advisor:Phone", "+90 555 111 22 33");
+            b.UseSetting("Advisor:WhatsApp", "");
+        }).CreateClient();
+
+        var site = await client.GetFromJsonAsync<JsonElement>("/api/site");
+
+        Assert.Equal("https://wa.me/905551112233", site.GetProperty("whatsappUrl").GetString());
     }
 }

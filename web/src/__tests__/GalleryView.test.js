@@ -68,6 +68,13 @@ describe('GalleryView', () => {
     expect(s.text()).toContain('Bostanlı, Karşıyaka, İzmir')
     expect(s.find('a[href="tel:05321112233"]').exists()).toBe(true)
   })
+  it('summary button is WhatsApp when a valid whatsappUrl exists', async () => {
+    api.get.mockImplementation((p) => (p === '/api/site' ? Promise.resolve({ ...site, whatsappUrl: 'https://wa.me/905320000001' }) : listingImpl(p)))
+    const w = await make()
+    const a = w.find('[data-testid="summary"] a[href="https://wa.me/905320000001"]')
+    expect(a.text()).toBe("WhatsApp'tan Ara")
+    expect(a.attributes('target')).toBe('_blank')
+  })
   it('clicking a photo opens the Lightbox at its index', async () => {
     const w = await make()
     await w.findAll('[data-testid="gallery-photo"] button')[6].trigger('click')

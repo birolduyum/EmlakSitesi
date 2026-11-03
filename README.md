@@ -31,7 +31,7 @@ cp .env.example .env
 | `POSTGRES_PASSWORD` | Veritabanı parolası. Zorunludur; boşsa `docker compose` hata verir. |
 | `JWT_KEY` | Oturum anahtarı, **en az 32 karakter**, tahmin edilemez olmalı. Zorunludur. |
 | `Users__0..2__Username / Password / Role` | Üç hesap. 0 ve 1 `Admin`, 2 `Field` (saha) rolündedir. Parolalar veritabanında yalnızca hash olarak saklanır. Hesap yönetim ekranı yoktur; hesaplar buradan tanımlanır. |
-| `Advisor__Name / Phone / WhatsApp` | İlan sayfalarındaki danışman kutusunda görünen ad ve telefonlar. |
+| `Advisor__Name / Phone / WhatsApp` | İlan sayfalarındaki danışman kutusunda görünen ad ve telefonlar. `Advisor__WhatsApp` boşsa WhatsApp bağlantısı `Advisor__Phone` rakamlarından (`https://wa.me/<rakamlar>`, 7-15 hane) türetilir; ikisi de yoksa düğmeler `tel:` yedeğine döner. WhatsApp'ta doğrudan sesli arama başlatan bir bağlantı yoktur: "WhatsApp'tan Ara" yalnızca sohbeti açar, arama simgesine ziyaretçi dokunur. |
 | `Seed__Sample` | Varsayılan `true`: veritabanında hiç ilan yokken örnek ilanlar ve yer tutucu fotoğraflar eklenir. **Üretimde `false` yapın** (`.env` içine `Seed__Sample=false` yazın). |
 | `RateLimit__LoginPerMinute` | İsteğe bağlı. Giriş denemesi sınırı: istemci IP'si başına dakikada en çok bu kadar deneme (varsayılan `10`). Aşılırsa API `429` ve "Çok fazla deneme. Bir dakika sonra tekrar deneyin." döner. |
 

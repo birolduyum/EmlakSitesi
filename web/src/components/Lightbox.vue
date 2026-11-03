@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import { useAdvisor } from '../composables/useAdvisor.js'
+import AdvisorCallLink from './AdvisorCallLink.vue'
 
 const props = defineProps({
   photos: { type: Array, default: () => [] },
@@ -9,8 +9,6 @@ const props = defineProps({
   opener: { type: Object, default: null }
 })
 const emit = defineEmits(['close'])
-
-const { info, telHref } = useAdvisor()
 
 function clamp(i) {
   return Math.min(Math.max(Number.isInteger(i) ? i : 0, 0), Math.max(props.photos.length - 1, 0))
@@ -129,8 +127,7 @@ function onStageClick(e) {
       <div class="bar">
         <button ref="backButton" type="button" class="bar-btn" data-testid="back" @click="emit('close')">Geri</button>
         <span class="counter" data-testid="counter" aria-live="polite">{{ index + 1 }} / {{ photos.length }}</span>
-        <a v-if="telHref" :href="telHref" class="btn call" :aria-label="`Ara: ${info?.advisorName ?? ''}`.trim()">Ara</a>
-        <span v-else class="spacer"></span>
+        <AdvisorCallLink />
       </div>
       <div
         class="stage"
@@ -159,13 +156,14 @@ function onStageClick(e) {
   color: #fff;
 }
 .bar {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   gap: 0.75rem;
   padding: 0.75rem 1rem;
 }
 .bar-btn {
+  justify-self: start;
   background: transparent;
   border-color: rgba(255, 255, 255, 0.6);
 }
@@ -173,14 +171,13 @@ function onStageClick(e) {
   background: rgba(255, 255, 255, 0.15);
 }
 .call {
+  justify-self: end;
   background: var(--green-600);
   border-color: var(--green-600);
   color: #fff;
 }
-.spacer {
-  min-width: 4rem;
-}
 .counter {
+  grid-column: 2;
   font-variant-numeric: tabular-nums;
 }
 .stage {

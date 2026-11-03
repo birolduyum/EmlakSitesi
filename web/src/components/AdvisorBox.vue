@@ -1,17 +1,18 @@
 <script setup>
 import { useAdvisor } from '../composables/useAdvisor.js'
+import AdvisorCallLink from './AdvisorCallLink.vue'
 
-const { info, telHref } = useAdvisor()
+const { info, telHref, whatsappUrl } = useAdvisor()
 </script>
 
 <template>
   <div class="advisor">
-    <template v-if="info && (info.advisorName || telHref)">
+    <template v-if="info && (info.advisorName || whatsappUrl || telHref)">
       <span v-if="info.advisorName" class="name">
         <span class="role">Danışman</span>
         {{ info.advisorName }}
       </span>
-      <a v-if="telHref" :href="telHref" class="btn call" :aria-label="`Ara: ${info.advisorName ?? ''}`.trim()" @click.stop>Ara</a>
+      <AdvisorCallLink />
     </template>
   </div>
 </template>
@@ -23,6 +24,7 @@ const { info, telHref } = useAdvisor()
   align-items: stretch;
   gap: 0.5rem;
   min-width: 8.5rem;
+  max-width: 11rem;
   text-align: center;
 }
 .name {

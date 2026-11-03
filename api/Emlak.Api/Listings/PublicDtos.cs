@@ -22,6 +22,29 @@ public record PublicListingDetail(
 
 public record SiteInfo(string AdvisorName, string AdvisorPhone, string? WhatsappUrl);
 
+/// <summary>Danışman ayarlarından <see cref="SiteInfo"/> üretir. WhatsApp boşsa telefon rakamlarından wa.me bağlantısı türetilir.</summary>
+public static class SiteInfoFactory
+{
+    public static SiteInfo Create(string? name, string? phone, string? whatsapp)
+        => new(name ?? "", phone ?? "", WhatsappUrl(phone, whatsapp));
+
+    public static string? WhatsappUrl(string? phone, string? whatsapp)
+    {
+        var configured = whatsapp?.Trim();
+        if (!string.IsNullOrEmpty(configured))
+        {
+            if (configured.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return configured;
+            var digits = Digits(configured);
+            if (digits.Length > 0) return $"https://wa.me/{digits}";
+        }
+
+        var phoneDigits = Digits(phone);
+        return phoneDigits.Length is >= 7 and <= 15 ? $"https://wa.me/{phoneDigits}" : null;
+    }
+
+    private static string Digits(string? value) => new(value?.Where(char.IsAsciiDigit).ToArray() ?? []);
+}
+
 /// <summary>Listing → ziyaretçi DTO'ları için tek eşleme yeri; yeni bir alan buraya eklenmedikçe ziyaretçiye çıkmaz.</summary>
 public static class PublicMapper
 {

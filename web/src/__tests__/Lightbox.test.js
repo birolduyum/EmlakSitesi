@@ -91,6 +91,14 @@ describe('Lightbox', () => {
     expect(wrapper.emitted('close')).toHaveLength(1)
     expect(q('a[href="tel:+905321112233"]')).not.toBeNull()
   })
+  it('top bar Ara is a WhatsApp link when whatsappUrl exists', async () => {
+    api.get.mockResolvedValue({ advisorName: 'Ayşe', advisorPhone: '+90 532 111 22 33', whatsappUrl: 'https://wa.me/905320000001' })
+    await open()
+    const a = q('a[href="https://wa.me/905320000001"]')
+    expect(a.textContent.trim()).toBe("WhatsApp'tan Ara")
+    expect(a.getAttribute('aria-label')).toBe("WhatsApp'tan Ara: Ayşe")
+    expect(a.getAttribute('rel')).toBe('noopener noreferrer')
+  })
   it('is a labelled modal dialog', async () => {
     await open()
     const d = q('[role="dialog"]')

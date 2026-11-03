@@ -2,7 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useListing } from '../composables/useListing.js'
-import { useAdvisor } from '../composables/useAdvisor.js'
+import AdvisorCallLink from '../components/AdvisorCallLink.vue'
 import { formatArea } from '../format.js'
 import ListingState from '../components/ListingState.vue'
 import ListingHeadline from '../components/ListingHeadline.vue'
@@ -11,7 +11,6 @@ import placeholder from '../assets/placeholder.svg'
 
 const route = useRoute()
 const { listing, state, reload } = useListing(() => route.params.id)
-const { telHref } = useAdvisor()
 
 const lightboxIndex = ref(null)
 const lightboxOpener = ref(null)
@@ -58,7 +57,7 @@ const isWide = (i) => i % 5 === 4
           <ListingHeadline :listing="listing" level="h2" price-first>
             <p class="spec">{{ roomsAndArea }}</p>
           </ListingHeadline>
-          <a v-if="telHref" :href="telHref" class="btn call">Ara</a>
+          <AdvisorCallLink />
         </aside>
       </div>
 
@@ -132,11 +131,6 @@ const isWide = (i) => i % 5 === 4
 }
 .spec {
   margin: 0;
-}
-.call {
-  text-align: center;
-  background: var(--green-600);
-  border-color: var(--green-600);
 }
 @media (max-width: 900px) {
   .layout {

@@ -54,16 +54,7 @@ public static class PublicListingEndpoints
 
         app.MapGet("/api/site", (IConfiguration config) =>
         {
-            var whatsapp = config["Advisor:WhatsApp"]?.Trim();
-            string? url = null;
-            if (!string.IsNullOrEmpty(whatsapp))
-            {
-                var digits = new string(whatsapp.Where(char.IsDigit).ToArray());
-                url = whatsapp.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? whatsapp
-                    : digits.Length > 0 ? $"https://wa.me/{digits}" : null;
-            }
-
-            return Results.Ok(new SiteInfo(config["Advisor:Name"] ?? "", config["Advisor:Phone"] ?? "", url));
+            return Results.Ok(SiteInfoFactory.Create(config["Advisor:Name"], config["Advisor:Phone"], config["Advisor:WhatsApp"]));
         }).AllowAnonymous();
 
         return app;
