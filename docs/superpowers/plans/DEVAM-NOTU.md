@@ -7,7 +7,7 @@
 
 ## Git
 - Depo yerelde (`main`), `origin` = private `github.com/birolduyum/EmlakSitesi` (kişisel hesap; Karasoy değil).
-- Bütün iş görev görev atomic commit olarak yerel `main` dalında (19 commit). **Push yapılmadı**: kullanıcı "push et" diyene kadar beklenir.
+- Bütün iş görev görev atomic commit olarak yerel `main` dalında (19 commit). **Push yapıldı (03.11.2026, `origin/main`)**.
 
 ## Dosyalar
 - Tasarım: `docs/superpowers/specs/2026-11-02-emlak-sitesi-design.md`; plan: `docs/superpowers/plans/2026-11-02-emlak-sitesi.md`
