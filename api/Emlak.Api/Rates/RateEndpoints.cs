@@ -33,7 +33,7 @@ public static class RateEndpoints
             var user = http.User.Identity?.Name;
             if (string.IsNullOrEmpty(user)) { return Results.Unauthorized(); }
 
-            var now = DateTime.UtcNow;
+            var now = DateTimeOffset.UtcNow;
             var rows = await db.CurrencyRates.ToDictionaryAsync(r => r.Currency, ct);
             Upsert(db, rows, Currency.USD, req.Usd!.Value, now, user);
             Upsert(db, rows, Currency.EUR, req.Eur!.Value, now, user);
@@ -52,7 +52,7 @@ public static class RateEndpoints
         }
     }
 
-    private static void Upsert(AppDbContext db, Dictionary<Currency, CurrencyRate> rows, Currency c, decimal value, DateTime now, string user)
+    private static void Upsert(AppDbContext db, Dictionary<Currency, CurrencyRate> rows, Currency c, decimal value, DateTimeOffset now, string user)
     {
         if (rows.TryGetValue(c, out var row))
         {

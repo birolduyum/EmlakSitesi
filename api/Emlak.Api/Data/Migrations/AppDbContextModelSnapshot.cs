@@ -30,7 +30,7 @@ namespace Emlak.Api.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -53,7 +53,7 @@ namespace Emlak.Api.Data.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
 
-                    b.Property<DateTime?>("UpdatedAt")
+                    b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("UpdatedBy")
@@ -109,7 +109,7 @@ namespace Emlak.Api.Data.Migrations
                         .HasPrecision(18, 6)
                         .HasColumnType("numeric(18,6)");
 
-                    b.Property<DateTime>("UpdatedAt")
+                    b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("UpdatedBy")
@@ -126,14 +126,14 @@ namespace Emlak.Api.Data.Migrations
                         {
                             Currency = "USD",
                             TryPerUnit = 35m,
-                            UpdatedAt = new DateTime(2026, 11, 2, 0, 0, 0, 0, DateTimeKind.Utc),
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 11, 2, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             UpdatedBy = "seed"
                         },
                         new
                         {
                             Currency = "EUR",
                             TryPerUnit = 38m,
-                            UpdatedAt = new DateTime(2026, 11, 2, 0, 0, 0, 0, DateTimeKind.Utc),
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 11, 2, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             UpdatedBy = "seed"
                         });
                 });
@@ -194,7 +194,7 @@ namespace Emlak.Api.Data.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -212,7 +212,7 @@ namespace Emlak.Api.Data.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
 
-                    b.Property<DateTime?>("DeletedAt")
+                    b.Property<DateTimeOffset?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("DeletedBy")
@@ -280,7 +280,7 @@ namespace Emlak.Api.Data.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
-                    b.Property<DateTime?>("RestoredAt")
+                    b.Property<DateTimeOffset?>("RestoredAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("RestoredBy")
@@ -308,7 +308,7 @@ namespace Emlak.Api.Data.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
-                    b.Property<DateTime?>("UpdatedAt")
+                    b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("UpdatedBy")
@@ -403,10 +403,10 @@ namespace Emlak.Api.Data.Migrations
                     b.Property<string>("Note")
                         .HasColumnType("text");
 
-                    b.Property<DateTime?>("ReturnedAt")
+                    b.Property<DateTimeOffset?>("ReturnedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime>("TakenAt")
+                    b.Property<DateTimeOffset>("TakenAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Username")

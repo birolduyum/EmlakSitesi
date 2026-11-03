@@ -63,7 +63,7 @@ public static class AdminListingEndpoints
             var (advisor, advisorError) = await ResolveAdvisorAsync(db, input.AdvisorId, currentAdvisorId: null, ct);
             if (advisorError is not null) { return BadRequest([advisorError]); }
 
-            var listing = new Listing { CreatedAt = DateTime.UtcNow, CreatedBy = UserName(user), Owner = new Owner() };
+            var listing = new Listing { CreatedAt = DateTimeOffset.UtcNow, CreatedBy = UserName(user), Owner = new Owner() };
             Apply(listing, input, tags);
             listing.Advisor = advisor;
             db.Listings.Add(listing);
@@ -89,7 +89,7 @@ public static class AdminListingEndpoints
 
             Apply(listing, input, tags);
             listing.Advisor = advisor;
-            listing.UpdatedAt = DateTime.UtcNow;
+            listing.UpdatedAt = DateTimeOffset.UtcNow;
             listing.UpdatedBy = UserName(user);
             await db.SaveChangesAsync(ct);
 
@@ -106,7 +106,7 @@ public static class AdminListingEndpoints
             if (!listing.IsDeleted)
             {
                 listing.IsDeleted = true;
-                listing.DeletedAt = DateTime.UtcNow;
+                listing.DeletedAt = DateTimeOffset.UtcNow;
                 listing.DeletedBy = UserName(user);
                 await db.SaveChangesAsync(ct);
             }
@@ -123,7 +123,7 @@ public static class AdminListingEndpoints
             if (listing.IsDeleted)
             {
                 listing.IsDeleted = false;
-                listing.RestoredAt = DateTime.UtcNow;
+                listing.RestoredAt = DateTimeOffset.UtcNow;
                 listing.RestoredBy = UserName(user);
                 await db.SaveChangesAsync(ct);
             }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatPrice, formatArea, formatDate, formatFloor, specLine } from '../format.js'
+import { formatPrice, formatArea, formatDate, formatDateTime, formatFloor, specLine } from '../format.js'
 
 // Saat dilimine bağlı olmasın: tarih yerel parçalardan kurulur
 const localIso = (y, m, d) => new Date(y, m - 1, d, 12, 0, 0).toISOString()
@@ -27,6 +27,24 @@ describe('formatArea', () => {
 describe('formatDate', () => {
   it('formats day.month.year', () => expect(formatDate(localIso(2026, 8, 23))).toBe('23.08.2026'))
   it.each([null, undefined, '', 'not-a-date'])('prints - for %s', (v) => expect(formatDate(v)).toBe('-'))
+})
+
+describe('formatDateTime (viewer local time)', () => {
+  const pad = (n) => String(n).padStart(2, '0')
+  const expected = (iso) => {
+    const d = new Date(iso)
+    return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+  }
+  it('shows the instant in the local zone', () => {
+    expect(formatDateTime('2026-11-03T15:33:00+00:00')).toBe(expected('2026-11-03T15:33:00Z'))
+  })
+  it('the same instant written with different offsets gives identical output', () => {
+    const utc = formatDateTime('2026-11-03T15:33:00+00:00')
+    expect(formatDateTime('2026-11-03T18:33:00+03:00')).toBe(utc)
+    expect(formatDateTime('2026-11-03T15:33:00Z')).toBe(utc)
+    expect(formatDate('2026-11-03T18:33:00+03:00')).toBe(formatDate('2026-11-03T15:33:00+00:00'))
+  })
+  it.each([null, undefined, '', 'x'])('prints - for %s', (v) => expect(formatDateTime(v)).toBe('-'))
 })
 
 describe('formatFloor', () => {

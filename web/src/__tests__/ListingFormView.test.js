@@ -5,6 +5,7 @@ import ListingFormView from '../views/admin/ListingFormView.vue'
 import { api } from '../api.js'
 import { setSession, clearSession } from '../session.js'
 import { resetSiteInfo } from '../site.js'
+import { formatDateTime } from '../format.js'
 
 vi.mock('../api.js', () => ({ api: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn(), upload: vi.fn() } }))
 
@@ -242,8 +243,8 @@ describe('ListingFormView (edit)', () => {
     getDetail = async () => detail({ updatedBy: 'veli', updatedAt: '2026-09-01T10:00:00Z' })
     const { w } = await make('/admin/ilan/5')
     const box = w.find('[data-testid="audit"]')
-    expect(box.text()).toContain('Oluşturan ayse, 01.08.2026')
-    expect(box.text()).toContain('Son güncelleyen veli, 01.09.2026')
+    expect(box.text()).toContain(`Oluşturan ayse, ${formatDateTime('2026-08-01T10:00:00Z')}`)
+    expect(box.text()).toContain(`Son güncelleyen veli, ${formatDateTime('2026-09-01T10:00:00Z')}`)
     expect(box.text()).not.toContain('Silen')
   })
   it('deleted_listing_is_readonly_with_restore', async () => {
@@ -252,8 +253,8 @@ describe('ListingFormView (edit)', () => {
     })
     api.post.mockResolvedValue(null)
     const { w } = await make('/admin/ilan/5')
-    expect(w.find('[data-testid="audit"]').text()).toContain('Silen veli, 02.09.2026')
-    expect(w.find('[data-testid="audit"]').text()).toContain('Geri alan ayse, 20.08.2026')
+    expect(w.find('[data-testid="audit"]').text()).toContain(`Silen veli, ${formatDateTime('2026-09-02T10:00:00Z')}`)
+    expect(w.find('[data-testid="audit"]').text()).toContain(`Geri alan ayse, ${formatDateTime('2026-08-20T10:00:00Z')}`)
     expect(w.find('button[type="submit"]').exists()).toBe(false)
     expect(w.find('fieldset[disabled]').exists()).toBe(true)
     expect(w.find('[data-testid="photo-manager"]').exists()).toBe(false)

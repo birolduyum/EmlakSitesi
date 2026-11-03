@@ -73,16 +73,16 @@ public class PublicApiTests : IClassFixture<ApiFactory>
     public async Task Detail_ExposesUpdatedAt_FallingBackToCreatedAt()
     {
         var client = await FreshClientAsync();
-        var created = new DateTime(2026, 3, 1, 10, 0, 0, DateTimeKind.Utc);
-        var updated = new DateTime(2026, 4, 2, 11, 30, 0, DateTimeKind.Utc);
+        var created = new DateTimeOffset(2026, 3, 1, 10, 0, 0, TimeSpan.Zero);
+        var updated = new DateTimeOffset(2026, 4, 2, 11, 30, 0, TimeSpan.Zero);
         var untouched = await SeedListingAsync(new ListingBuilder().CreatedAt(created));
         var edited = await SeedListingAsync(new ListingBuilder().CreatedAt(created).UpdatedAt(updated));
 
         var a = await client.GetFromJsonAsync<JsonElement>($"/api/listings/{untouched.Id}");
         var b = await client.GetFromJsonAsync<JsonElement>($"/api/listings/{edited.Id}");
 
-        Assert.Equal(created, a.GetProperty("updatedAt").GetDateTime().ToUniversalTime());
-        Assert.Equal(updated, b.GetProperty("updatedAt").GetDateTime().ToUniversalTime());
+        Assert.Equal(created, a.GetProperty("updatedAt").GetDateTimeOffset());
+        Assert.Equal(updated, b.GetProperty("updatedAt").GetDateTimeOffset());
         Assert.False(b.TryGetProperty("updatedBy", out _));
     }
 
@@ -130,9 +130,9 @@ public class PublicApiTests : IClassFixture<ApiFactory>
         var l = await SeedListingAsync(new ListingBuilder());
         var gone = await SeedListingAsync(new ListingBuilder().Deleted());
         await SeedAsync(db => db.Showings.AddRange(
-            new Showing { ListingId = l.Id, Username = "saha1", TakenAt = DateTime.UtcNow },
-            new Showing { ListingId = l.Id, Username = "saha1", TakenAt = DateTime.UtcNow.AddDays(-1), ReturnedAt = DateTime.UtcNow },
-            new Showing { ListingId = gone.Id, Username = "saha1", TakenAt = DateTime.UtcNow }));
+            new Showing { ListingId = l.Id, Username = "saha1", TakenAt = DateTimeOffset.UtcNow },
+            new Showing { ListingId = l.Id, Username = "saha1", TakenAt = DateTimeOffset.UtcNow.AddDays(-1), ReturnedAt = DateTimeOffset.UtcNow },
+            new Showing { ListingId = gone.Id, Username = "saha1", TakenAt = DateTimeOffset.UtcNow }));
 
         var detail = await client.GetFromJsonAsync<JsonElement>($"/api/listings/{l.Id}");
         var deleted = await client.GetAsync($"/api/listings/{gone.Id}");
@@ -147,7 +147,7 @@ public class PublicApiTests : IClassFixture<ApiFactory>
     {
         var client = await FreshClientAsync();
         await SeedListingAsync(new ListingBuilder().Titled("fotosuz"));
-        await SeedListingAsync(new ListingBuilder().Titled("fotolu").WithPhotos("7/a.jpg", "7/b.webp").CreatedAt(DateTime.UtcNow.AddDays(1)));
+        await SeedListingAsync(new ListingBuilder().Titled("fotolu").WithPhotos("7/a.jpg", "7/b.webp").CreatedAt(DateTimeOffset.UtcNow.AddDays(1)));
 
         var page = await client.GetFromJsonAsync<JsonElement>("/api/listings");
         var items = page.GetProperty("items");
@@ -275,7 +275,8 @@ public class PublicApiTests : IClassFixture<ApiFactory>
     [InlineData("00 90 532 444 55 66", "", "https://wa.me/905324445566")]
     [InlineData("(0532) 444-55-66", "", "https://wa.me/905324445566")]
     [InlineData("05324445566", "", "https://wa.me/905324445566")]
-    [InlineData("532 444 55 66", "", "https://wa.me/5324445566")] // 10 hane, baştaki 0 yok: olduğu gibi (README uluslararası biçimi önerir)
+    [InlineData("532 444 55 66", "", "https://wa.me/905324445566")] // 5 ile başlayan 10 hane: 90 eklenir
+    [InlineData("212 444 55 66", "", "https://wa.me/2124445566")] // diğer 10 haneli numaralar olduğu gibi
     [InlineData("123", "", null)]
     [InlineData("abc", "", null)]
     // Açık (çıplak) WhatsApp numarası da normalize edilir ve 7-15 hane denetiminden geçer; işe yaramazsa telefona düşülür.

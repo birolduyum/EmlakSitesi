@@ -32,14 +32,14 @@ public class Listing
     public bool LoanEligible { get; set; }
     public bool Swap { get; set; }
     public string Description { get; set; } = "";
-    public DateTime CreatedAt { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
     public string CreatedBy { get; set; } = "";
-    public DateTime? UpdatedAt { get; set; }
+    public DateTimeOffset? UpdatedAt { get; set; }
     public string? UpdatedBy { get; set; }
     public bool IsDeleted { get; set; }
-    public DateTime? DeletedAt { get; set; }
+    public DateTimeOffset? DeletedAt { get; set; }
     public string? DeletedBy { get; set; }
-    public DateTime? RestoredAt { get; set; }
+    public DateTimeOffset? RestoredAt { get; set; }
     public string? RestoredBy { get; set; }
     public int? AdvisorId { get; set; }
 

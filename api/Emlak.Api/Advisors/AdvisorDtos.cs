@@ -5,7 +5,7 @@ namespace Emlak.Api.Advisors;
 /// <summary>Yönetici ekranı için danışman; ziyaretçiye giden <c>PublicAdvisor</c> değildir (denetim alanları ve ilan sayısı içerir).</summary>
 public record AdminAdvisorDto(
     int Id, string Name, string Phone, string? WhatsApp, bool IsActive, int ListingCount,
-    DateTime CreatedAt, string CreatedBy, DateTime? UpdatedAt, string? UpdatedBy);
+    DateTimeOffset CreatedAt, string CreatedBy, DateTimeOffset? UpdatedAt, string? UpdatedBy);
 
 public record AdvisorInput(string? Name, string? Phone, string? WhatsApp);
 

@@ -15,7 +15,7 @@ public class RateTests : IClassFixture<ApiFactory>
 
     public RateTests(ApiFactory factory) => _factory = factory;
 
-    private sealed record RateBody(string Currency, decimal TryPerUnit, DateTime UpdatedAt, string UpdatedBy);
+    private sealed record RateBody(string Currency, decimal TryPerUnit, DateTimeOffset UpdatedAt, string UpdatedBy);
 
     private async Task ResetAsync()
     {
@@ -49,7 +49,7 @@ public class RateTests : IClassFixture<ApiFactory>
     {
         await ResetAsync();
         var admin = await _factory.LoginAsync("admin2");
-        var before = DateTime.UtcNow.AddMinutes(-1);
+        var before = DateTimeOffset.UtcNow.AddMinutes(-1);
 
         var res = await admin.PutAsJsonAsync("/api/admin/rates", new { usd = 41.25m, eur = 44.5m });
 

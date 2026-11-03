@@ -33,7 +33,7 @@ public class ListingBuilder
             Deed = DeedStatus.KatMulkiyeti,
             Kitchen = KitchenType.Kapali,
             Description = "Açıklama",
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = DateTimeOffset.UtcNow,
             CreatedBy = "admin1",
             Owner = new Owner { Name = "Ev Sahibi", Phone = "0555 000 00 00" },
         };
@@ -50,9 +50,9 @@ public class ListingBuilder
     public ListingBuilder WithOwner(string name, string phone, string? note = null) { _l.Owner = new Owner { Name = name, Phone = phone, Note = note }; return this; }
     public ListingBuilder WithTags(params FeatureTag[] tags) { _l.Tags = tags.ToList(); return this; }
     public ListingBuilder WithAdvisor(Advisor advisor) { _l.Advisor = advisor; return this; }
-    public ListingBuilder CreatedAt(DateTime utc) { _l.CreatedAt = utc; return this; }
-    public ListingBuilder UpdatedAt(DateTime utc) { _l.UpdatedAt = utc; return this; }
-    public ListingBuilder Deleted() { _l.IsDeleted = true; _l.DeletedAt = DateTime.UtcNow; _l.DeletedBy = "admin1"; return this; }
+    public ListingBuilder CreatedAt(DateTimeOffset utc) { _l.CreatedAt = utc; return this; }
+    public ListingBuilder UpdatedAt(DateTimeOffset utc) { _l.UpdatedAt = utc; return this; }
+    public ListingBuilder Deleted() { _l.IsDeleted = true; _l.DeletedAt = DateTimeOffset.UtcNow; _l.DeletedBy = "admin1"; return this; }
     public ListingBuilder WithPhotos(params string[] paths)
     {
         _l.Photos = paths.Select((p, i) => new Photo { FilePath = p, SortOrder = i }).ToList();

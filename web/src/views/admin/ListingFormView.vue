@@ -3,7 +3,7 @@ import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter, onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router'
 import { api } from '../../api.js'
 import { isAdmin, isLoggingOut } from '../../auth.js'
-import { formatDate } from '../../format.js'
+import { formatDateTime } from '../../format.js'
 import { getSiteInfo } from '../../site.js'
 import { useAdvisorList } from '../../composables/useAdvisorList.js'
 import { useListingForm, toInput, validate, fieldOfError } from '../../composables/useListingForm.js'
@@ -234,7 +234,7 @@ onBeforeUnmount(() => {
 const audit = computed(() => {
   const d = detail.value
   if (!d) return []
-  const line = (label, by, at) => `${label} ${by ?? '-'}, ${formatDate(at)}`
+  const line = (label, by, at) => `${label} ${by ?? '-'}, ${formatDateTime(at)}`
   const rows = [line('Oluşturan', d.createdBy, d.createdAt)]
   if (d.updatedBy) rows.push(line('Son güncelleyen', d.updatedBy, d.updatedAt))
   if (d.deletedBy) rows.push(line('Silen', d.deletedBy, d.deletedAt))

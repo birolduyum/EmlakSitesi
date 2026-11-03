@@ -8,17 +8,17 @@ public record PagedResult<T>(List<T> Items, int Total, int Page, int PageSize);
 
 public record PublicListingSummary(
     int Id, string Title, string? Badge, ListingType Type, decimal Price, Currency Currency,
-    string City, string District, string Rooms, int GrossM2, int Floor, DateTime CreatedAt, string[] PhotoUrls, PublicAdvisor? Advisor);
+    string City, string District, string Rooms, int GrossM2, int Floor, DateTimeOffset CreatedAt, string[] PhotoUrls, PublicAdvisor? Advisor);
 
 public record PublicTag(int Id, string Name, TagGroup Group);
 
 public record PublicListingDetail(
     int Id, string Title, string? Badge, ListingType Type, decimal Price, Currency Currency,
-    string City, string District, string Rooms, int GrossM2, int Floor, DateTime CreatedAt, string[] PhotoUrls,
+    string City, string District, string Rooms, int GrossM2, int Floor, DateTimeOffset CreatedAt, string[] PhotoUrls,
     decimal? Deposit, decimal? Aidat, string Neighborhood, int Bathrooms, int NetM2, int TotalFloors, int BuildingAge,
     HeatingType Heating, FurnishingStatus Furnishing, UsageStatus Usage, DeedStatus Deed, KitchenType Kitchen,
     bool Balcony, bool Elevator, bool Parking, bool InSite, bool LoanEligible, bool Swap,
-    PublicTag[] Tags, string Description, int ShowingCount, DateTime UpdatedAt, PublicAdvisor? Advisor);
+    PublicTag[] Tags, string Description, int ShowingCount, DateTimeOffset UpdatedAt, PublicAdvisor? Advisor);
 
 public record SiteInfo(string AdvisorName, string AdvisorPhone, string? WhatsappUrl);
 

@@ -10,20 +10,20 @@ public record AdminOwner(string Name, string Phone, string? Note);
 
 public record AdminListingSummary(
     int Id, string Title, string? Badge, ListingType Type, decimal Price, Currency Currency,
-    string City, string District, string Rooms, int GrossM2, int Floor, DateTime CreatedAt, string[] PhotoUrls,
-    string CreatedBy, bool IsDeleted, DateTime? DeletedAt, string? DeletedBy, AdminOwner Owner,
+    string City, string District, string Rooms, int GrossM2, int Floor, DateTimeOffset CreatedAt, string[] PhotoUrls,
+    string CreatedBy, bool IsDeleted, DateTimeOffset? DeletedAt, string? DeletedBy, AdminOwner Owner,
     int? AdvisorId, string? AdvisorName);
 
 public record AdminListingDetail(
     int Id, string Title, string? Badge, ListingType Type, decimal Price, Currency Currency,
-    string City, string District, string Rooms, int GrossM2, int Floor, DateTime CreatedAt, string[] PhotoUrls,
+    string City, string District, string Rooms, int GrossM2, int Floor, DateTimeOffset CreatedAt, string[] PhotoUrls,
     decimal? Deposit, decimal? Aidat, string Neighborhood, int Bathrooms, int NetM2, int TotalFloors, int BuildingAge,
     HeatingType Heating, FurnishingStatus Furnishing, UsageStatus Usage, DeedStatus Deed, KitchenType Kitchen,
     bool Balcony, bool Elevator, bool Parking, bool InSite, bool LoanEligible, bool Swap,
     PublicTag[] Tags, string Description, int ShowingCount,
     AdminOwner Owner,
-    string CreatedBy, DateTime? UpdatedAt, string? UpdatedBy,
-    bool IsDeleted, DateTime? DeletedAt, string? DeletedBy, DateTime? RestoredAt, string? RestoredBy,
+    string CreatedBy, DateTimeOffset? UpdatedAt, string? UpdatedBy,
+    bool IsDeleted, DateTimeOffset? DeletedAt, string? DeletedBy, DateTimeOffset? RestoredAt, string? RestoredBy,
     PhotoDto[] Photos,
     int? AdvisorId);
 

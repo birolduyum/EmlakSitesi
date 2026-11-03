@@ -32,7 +32,7 @@ public static class ShowingEndpoints
                 return Results.Conflict(new { error = "Bu ilan için zaten açık bir gösterme kaydınız var." });
             }
 
-            var showing = new Showing { ListingId = listingId, Username = user, TakenAt = DateTime.UtcNow };
+            var showing = new Showing { ListingId = listingId, Username = user, TakenAt = DateTimeOffset.UtcNow };
             db.Showings.Add(showing);
             await db.SaveChangesAsync(ct);
 
@@ -55,7 +55,7 @@ public static class ShowingEndpoints
             if (showing.Username != user && !http.User.IsInRole(nameof(UserRole.Admin))) { return Results.Forbid(); }
             if (showing.ReturnedAt is not null) { return Results.Conflict(new { error = "Bu kayıt zaten kapatılmış." }); }
 
-            showing.ReturnedAt = DateTime.UtcNow;
+            showing.ReturnedAt = DateTimeOffset.UtcNow;
             showing.Note = note;
             await db.SaveChangesAsync(ct);
             return Results.NoContent();
@@ -113,33 +113,33 @@ public static class ShowingEndpoints
         => string.IsNullOrWhiteSpace(http.User.Identity?.Name) ? null : http.User.Identity!.Name;
 
     private static IResult BadBound(string name)
-        => Results.BadRequest(new { errors = new[] { $"'{name}' geçerli bir tarih değil (örn. 2026-11-02 ya da 2026-11-02T10:30:00Z)." } });
+        => Results.BadRequest(new { errors = new[] { $"'{name}' geçerli bir tarih değil (örn. 2026-11-02, 2026-11-02T10:30:00Z ya da 2026-11-02T10:30:00+03:00)." } });
 
     // Makul tarih aralığı dışındaki sınırlar (0001-01-01, 9999-12-31 ...) 400 olur: AddDays/AddTicks taşması ve Npgsql'in
     // uç değer dönüşümü 500'e yol açmasın.
-    private static readonly DateTime MinBound = new(1900, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-    private static readonly DateTime MaxBound = new(2200, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTimeOffset MinBound = new(1900, 1, 1, 0, 0, 0, TimeSpan.Zero);
+    private static readonly DateTimeOffset MaxBound = new(2200, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
     /// <summary>
     /// Boş değer = sınır yok. Yalnızca tarih (yyyy-MM-dd) verilirse UTC gün başı; endOfDay ise ertesi günün başı (dışlayıcı üst sınır,
     /// yani o günün tamamı dahil). Saatli değer verilirse olduğu gibi kullanılır; üst sınırda tam eşleşme dahildir (+1 mikrosaniye; PostgreSQL mikrosaniye hassasiyetindedir).
     /// </summary>
-    private static bool TryParseBound(string? raw, bool endOfDay, out DateTime? utc)
+    private static bool TryParseBound(string? raw, bool endOfDay, out DateTimeOffset? utc)
     {
         utc = null;
         if (string.IsNullOrWhiteSpace(raw)) { return true; }
 
         var s = raw.Trim();
-        DateTime value;
+        DateTimeOffset value;
         if (DateOnly.TryParseExact(s, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var d))
         {
-            var start = DateTime.SpecifyKind(d.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc);
+            var start = new DateTimeOffset(d.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
             if (start < MinBound || start >= MaxBound) { return false; }
             value = endOfDay ? start.AddDays(1) : start;
         }
         else if (DateTimeOffset.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var dto))
         {
-            var t = dto.UtcDateTime;
+            var t = dto.ToUniversalTime();
             if (t < MinBound || t >= MaxBound) { return false; }
             value = endOfDay ? t.AddTicks(TimeSpan.TicksPerMicrosecond) : t;
         }

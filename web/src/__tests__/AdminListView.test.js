@@ -268,6 +268,12 @@ describe('AdminListView', () => {
       await make('Admin', '/admin?advisorId=abc')
       expect(listCalls()[0][1]).not.toHaveProperty('advisorId')
     })
+    it('field_role_drops_a_stray_advisorId_param_so_no_hidden_filter_counts', async () => {
+      listImpl = async () => ({ items: [fieldRow(1)], total: 1 })
+      const { w } = await make('Field', '/admin?advisorId=4')
+      expect(listCalls()[0][1]).not.toHaveProperty('advisorId')
+      expect(w.find('button.toggle').text()).toBe('Filtreler')
+    })
     it('field_role_gets_no_advisor_filter_and_never_asks_for_the_advisor_list', async () => {
       listImpl = async () => ({ items: [fieldRow(1)], total: 1 })
       const { w } = await make('Field')

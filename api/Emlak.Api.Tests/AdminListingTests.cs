@@ -93,10 +93,56 @@ public class AdminListingTests : IClassFixture<ApiFactory>
 
         var saved = await WithDbAsync(db => db.Listings.Include(l => l.Owner).SingleAsync(l => l.Id == id));
         Assert.Equal("admin2", saved.CreatedBy);
-        Assert.True((DateTime.UtcNow - saved.CreatedAt).Duration() < TimeSpan.FromMinutes(1));
+        Assert.True((DateTimeOffset.UtcNow - saved.CreatedAt).Duration() < TimeSpan.FromMinutes(1));
         Assert.Equal(OwnerName, saved.Owner.Name);
         Assert.Equal(OwnerPhone, saved.Owner.Phone);
         Assert.Equal(OwnerNote, saved.Owner.Note);
+    }
+
+    [Fact]
+    public async Task Dates_AreSerializedWithOffset()
+    {
+        await ResetAsync();
+        var admin = await _factory.LoginAsync("admin1");
+
+        var res = await admin.PostAsJsonAsync("/api/admin/listings", ValidInput());
+        var raw = await res.Content.ReadAsStringAsync();
+        var json = JsonDocument.Parse(raw).RootElement;
+        var created = json.GetProperty("createdAt").GetString()!;
+        var id = json.GetProperty("id").GetInt32();
+        var detail = await admin.GetFromJsonAsync<JsonElement>($"/api/admin/listings/{id}");
+        var fromDetail = detail.GetProperty("createdAt").GetString()!;
+        var stored = await WithDbAsync(db => db.Listings.AsNoTracking().Where(l => l.Id == id).Select(l => l.CreatedAt).SingleAsync());
+
+        Assert.EndsWith("+00:00", fromDetail);
+        Assert.True((DateTimeOffset.Parse(created) - DateTimeOffset.Parse(fromDetail)).Duration() < TimeSpan.FromMilliseconds(1)); // PostgreSQL mikrosaniye hassasiyetindedir
+        Assert.Equal(stored.ToUniversalTime(), DateTimeOffset.Parse(fromDetail).ToUniversalTime()); // gidiş-dönüş: aynı an
+    }
+
+    [Fact]
+    public async Task Write_Paths_StoreOffsetZeroDateTimeOffsets_Smoke()
+    {
+        await ResetAsync();
+        var admin = await _factory.LoginAsync("admin1");
+        var a = await admin.PostAsJsonAsync("/api/admin/advisors", new { name = "Ad", phone = "0532 111 22 33" });
+        var created = await admin.PostAsJsonAsync("/api/admin/listings", ValidInput());
+        var id = (await created.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetInt32();
+        await admin.PutAsJsonAsync($"/api/admin/listings/{id}", ValidInput());
+        await admin.DeleteAsync($"/api/admin/listings/{id}");
+        await admin.PostAsync($"/api/admin/listings/{id}/restore", null);
+        await admin.PutAsJsonAsync("/api/admin/rates", new { usd = 41.5, eur = 47 });
+        var advisorId = (await a.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetInt32();
+        await admin.PutAsJsonAsync($"/api/admin/advisors/{advisorId}", new { name = "Ad2", phone = "0532 111 22 33" });
+
+        var l = await WithDbAsync(db => db.Listings.AsNoTracking().SingleAsync(x => x.Id == id));
+        var rate = await WithDbAsync(db => db.CurrencyRates.AsNoTracking().FirstAsync());
+        var adv = await WithDbAsync(db => db.Advisors.AsNoTracking().SingleAsync());
+
+        foreach (var d in new DateTimeOffset?[] { l.CreatedAt, l.UpdatedAt, l.DeletedAt, l.RestoredAt, rate.UpdatedAt, adv.CreatedAt, adv.UpdatedAt })
+        {
+            Assert.NotNull(d);
+            Assert.Equal(TimeSpan.Zero, d!.Value.Offset);
+        }
     }
 
     [Fact]
@@ -107,8 +153,8 @@ public class AdminListingTests : IClassFixture<ApiFactory>
         await WithDbAsync(async db =>
         {
             db.Showings.AddRange(
-                new Showing { ListingId = l.Id, Username = "saha1", TakenAt = DateTime.UtcNow },
-                new Showing { ListingId = l.Id, Username = "saha1", TakenAt = DateTime.UtcNow.AddDays(-1), ReturnedAt = DateTime.UtcNow });
+                new Showing { ListingId = l.Id, Username = "saha1", TakenAt = DateTimeOffset.UtcNow },
+                new Showing { ListingId = l.Id, Username = "saha1", TakenAt = DateTimeOffset.UtcNow.AddDays(-1), ReturnedAt = DateTimeOffset.UtcNow });
             await db.SaveChangesAsync();
             return 0;
         });

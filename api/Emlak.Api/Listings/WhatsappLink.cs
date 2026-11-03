@@ -2,7 +2,7 @@ namespace Emlak.Api.Listings;
 
 /// <summary>
 /// Telefon/WhatsApp değerlerinden wa.me bağlantısı üreten TEK yardımcı (varsayılan danışman ve ilan danışmanları aynı kuralı kullanır).
-/// Rakamlar uluslararası biçime çevrilir: "00…" → baştaki 00 atılır; "0" ile başlayan 11 haneli numara (Türkiye ulusal biçimi) → "90…".
+/// Rakamlar uluslararası biçime çevrilir: "00…" → baştaki 00 atılır; "0" ile başlayan 11 haneli numara (Türkiye ulusal biçimi) ve "5" ile başlayan 10 haneli numara (başındaki 0 yazılmamış cep numarası) → "90…".
 /// </summary>
 public static class WhatsappLink
 {
@@ -41,6 +41,7 @@ public static class WhatsappLink
         var digits = new string(number?.Where(char.IsAsciiDigit).ToArray() ?? []);
         if (digits.StartsWith("00", StringComparison.Ordinal)) { digits = digits[2..]; }
         else if (digits.Length == 11 && digits[0] == '0') { digits = "90" + digits[1..]; }
+        else if (digits.Length == 10 && digits[0] == '5') { digits = "90" + digits; } // 5xx xxx xx xx: başındaki 0 yazılmamış Türkiye cep numarası
         return digits.Length is >= MinDigits and <= MaxDigits ? $"https://wa.me/{digits}" : null;
     }
 

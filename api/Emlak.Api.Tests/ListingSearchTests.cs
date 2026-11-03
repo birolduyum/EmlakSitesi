@@ -242,7 +242,7 @@ public class ListingSearchTests : IClassFixture<ApiFactory>
     {
         await using var scope = await FreshScopeAsync();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var t = DateTime.UtcNow;
+        var t = DateTimeOffset.UtcNow;
         await SeedAsync(db,
             new ListingBuilder().Titled("eski").CreatedAt(t.AddDays(-2)).Build(),
             new ListingBuilder().Titled("orta").CreatedAt(t.AddDays(-1)).WithPhotos("b.jpg", "c.jpg").Build(),

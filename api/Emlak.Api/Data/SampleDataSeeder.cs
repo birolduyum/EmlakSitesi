@@ -98,7 +98,7 @@ public static class SampleDataSeeder
         await using var tx = await db.Database.BeginTransactionAsync(ct);
 
         var tags = await EnsureTagsAsync(db, ct);
-        var now = DateTime.UtcNow;
+        var now = DateTimeOffset.UtcNow;
         var photoNo = 0;
         var advisors = AdvisorCatalog
             .Select(a => new Advisor { Name = a.Name, Phone = a.Phone, WhatsApp = a.WhatsApp, IsActive = true, CreatedAt = now, CreatedBy = "admin1" })
@@ -153,9 +153,9 @@ public static class SampleDataSeeder
         if (fieldUser is not null)
         {
             db.Showings.AddRange(
-                new Showing { ListingId = live[0].Id, Username = fieldUser, TakenAt = DateTime.UtcNow.AddDays(-1), ReturnedAt = DateTime.UtcNow.AddDays(-1).AddHours(2), Note = "Alıcı adayı daireyi beğendi, fiyatı soracak." },
-                new Showing { ListingId = live[2].Id, Username = fieldUser, TakenAt = DateTime.UtcNow.AddDays(-4), ReturnedAt = DateTime.UtcNow.AddDays(-4).AddHours(1), Note = "Site yönetimi anahtar teslimini onayladı." },
-                new Showing { ListingId = live[4].Id, Username = fieldUser, TakenAt = DateTime.UtcNow.AddHours(-3) });
+                new Showing { ListingId = live[0].Id, Username = fieldUser, TakenAt = DateTimeOffset.UtcNow.AddDays(-1), ReturnedAt = DateTimeOffset.UtcNow.AddDays(-1).AddHours(2), Note = "Alıcı adayı daireyi beğendi, fiyatı soracak." },
+                new Showing { ListingId = live[2].Id, Username = fieldUser, TakenAt = DateTimeOffset.UtcNow.AddDays(-4), ReturnedAt = DateTimeOffset.UtcNow.AddDays(-4).AddHours(1), Note = "Site yönetimi anahtar teslimini onayladı." },
+                new Showing { ListingId = live[4].Id, Username = fieldUser, TakenAt = DateTimeOffset.UtcNow.AddHours(-3) });
         }
 
         await db.SaveChangesAsync(ct);

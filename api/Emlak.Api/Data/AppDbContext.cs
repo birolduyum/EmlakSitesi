@@ -88,7 +88,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.TryPerUnit).HasPrecision(18, 6);
             e.Property(x => x.UpdatedBy).HasMaxLength(100);
             // Yer tutucu kurlar; yönetici ayar ekranından değiştirir.
-            var seedTime = new DateTime(2026, 11, 2, 0, 0, 0, DateTimeKind.Utc);
+            var seedTime = new DateTimeOffset(2026, 11, 2, 0, 0, 0, TimeSpan.Zero);
             e.HasData(
                 new CurrencyRate { Currency = Currency.USD, TryPerUnit = 35m, UpdatedAt = seedTime, UpdatedBy = "seed" },
                 new CurrencyRate { Currency = Currency.EUR, TryPerUnit = 38m, UpdatedAt = seedTime, UpdatedBy = "seed" });

@@ -25,6 +25,7 @@ const params = computed(() => {
   if (!admin) {
     delete p.status
     delete p.ownerText
+    delete p.advisorId
   }
   return p
 })

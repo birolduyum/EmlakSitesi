@@ -33,7 +33,7 @@ public static class AdvisorEndpoints
             var errors = AdvisorValidator.Validate(input);
             if (errors.Length > 0) { return BadRequest(errors); }
 
-            var advisor = new Advisor { CreatedAt = DateTime.UtcNow, CreatedBy = UserName(user), IsActive = true };
+            var advisor = new Advisor { CreatedAt = DateTimeOffset.UtcNow, CreatedBy = UserName(user), IsActive = true };
             Apply(advisor, input);
             db.Advisors.Add(advisor);
             await db.SaveChangesAsync(ct);
@@ -90,7 +90,7 @@ public static class AdvisorEndpoints
 
     private static void Touch(Advisor a, ClaimsPrincipal user)
     {
-        a.UpdatedAt = DateTime.UtcNow;
+        a.UpdatedAt = DateTimeOffset.UtcNow;
         a.UpdatedBy = UserName(user);
     }
 

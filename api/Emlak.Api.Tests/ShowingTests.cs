@@ -15,7 +15,7 @@ public class ShowingTests : IClassFixture<ApiFactory>
 
     public ShowingTests(ApiFactory factory) => _factory = factory;
 
-    private sealed record ShowingBody(int Id, int ListingId, string ListingTitle, string Username, DateTime TakenAt, DateTime? ReturnedAt, string? Note);
+    private sealed record ShowingBody(int Id, int ListingId, string ListingTitle, string Username, DateTimeOffset TakenAt, DateTimeOffset? ReturnedAt, string? Note);
 
     private async Task ResetAsync()
     {
@@ -55,7 +55,7 @@ public class ShowingTests : IClassFixture<ApiFactory>
         await ResetAsync();
         var listing = await SeedAsync(new ListingBuilder().Titled("anahtar-ilan"));
         var field = await _factory.LoginAsync("saha1");
-        var before = DateTime.UtcNow.AddMinutes(-1);
+        var before = DateTimeOffset.UtcNow.AddMinutes(-1);
 
         var dto = await TakeAsync(field, listing.Id);
 
@@ -63,7 +63,7 @@ public class ShowingTests : IClassFixture<ApiFactory>
         Assert.Equal(listing.Id, dto.ListingId);
         Assert.Equal("anahtar-ilan", dto.ListingTitle);
         Assert.Null(dto.ReturnedAt);
-        Assert.InRange(dto.TakenAt, before, DateTime.UtcNow.AddMinutes(1));
+        Assert.InRange(dto.TakenAt, before, DateTimeOffset.UtcNow.AddMinutes(1));
         var stored = await WithDbAsync(db => db.Showings.SingleAsync());
         Assert.Equal("saha1", stored.Username);
     }
@@ -263,10 +263,10 @@ public class ShowingTests : IClassFixture<ApiFactory>
         await WithDbAsync(async db =>
         {
             db.Showings.AddRange(
-                new Showing { ListingId = a.Id, Username = "saha1", TakenAt = new DateTime(2026, 11, 1, 10, 0, 0, DateTimeKind.Utc) },
-                new Showing { ListingId = a.Id, Username = "admin1", TakenAt = new DateTime(2026, 11, 2, 23, 30, 0, DateTimeKind.Utc) },
-                new Showing { ListingId = b.Id, Username = "saha1", TakenAt = new DateTime(2026, 11, 3, 0, 0, 0, DateTimeKind.Utc) },
-                new Showing { ListingId = b.Id, Username = "saha1", TakenAt = new DateTime(2026, 11, 4, 8, 0, 0, DateTimeKind.Utc) });
+                new Showing { ListingId = a.Id, Username = "saha1", TakenAt = new DateTimeOffset(2026, 11, 1, 10, 0, 0, TimeSpan.Zero) },
+                new Showing { ListingId = a.Id, Username = "admin1", TakenAt = new DateTimeOffset(2026, 11, 2, 23, 30, 0, TimeSpan.Zero) },
+                new Showing { ListingId = b.Id, Username = "saha1", TakenAt = new DateTimeOffset(2026, 11, 3, 0, 0, 0, TimeSpan.Zero) },
+                new Showing { ListingId = b.Id, Username = "saha1", TakenAt = new DateTimeOffset(2026, 11, 4, 8, 0, 0, TimeSpan.Zero) });
             await db.SaveChangesAsync();
             return 0;
         });
@@ -299,6 +299,38 @@ public class ShowingTests : IClassFixture<ApiFactory>
 
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.GetAsync("/api/admin/showings?from=dun")).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.GetAsync("/api/admin/showings?to=2026-13-45")).StatusCode);
+    }
+
+    [Fact]
+    public async Task Report_AcceptsOffsetBounds()
+    {
+        await ResetAsync();
+        var a = await SeedAsync(new ListingBuilder().Titled("a"));
+        await WithDbAsync(async db =>
+        {
+            db.Showings.AddRange(
+                new Showing { ListingId = a.Id, Username = "saha1", TakenAt = new DateTimeOffset(2026, 11, 2, 20, 59, 0, TimeSpan.Zero) },
+                new Showing { ListingId = a.Id, Username = "saha1", TakenAt = new DateTimeOffset(2026, 11, 2, 21, 0, 0, TimeSpan.Zero) },
+                new Showing { ListingId = a.Id, Username = "saha1", TakenAt = new DateTimeOffset(2026, 11, 3, 0, 0, 0, TimeSpan.Zero) },
+                new Showing { ListingId = a.Id, Username = "saha1", TakenAt = new DateTimeOffset(2026, 11, 3, 0, 1, 0, TimeSpan.Zero) });
+            await db.SaveChangesAsync();
+            return 0;
+        });
+        var admin = await _factory.LoginAsync("admin1");
+
+        // +03:00: 2026-11-03T00:00+03:00 = 2026-11-02T21:00Z (dahil); 2026-11-03T03:00+03:00 = 2026-11-03T00:00Z (tam eşleşme dahil).
+        var plus3 = await ReadListAsync(await admin.GetAsync("/api/admin/showings?from=2026-11-03T00:00:00%2B03:00&to=2026-11-03T03:00:00%2B03:00"));
+        var sameInstantUtc = await ReadListAsync(await admin.GetAsync("/api/admin/showings?from=2026-11-02T21:00:00Z&to=2026-11-03T00:00:00Z"));
+        var minus = await ReadListAsync(await admin.GetAsync("/api/admin/showings?from=2026-11-02T16:00:00-05:00"));
+
+        Assert.Equal(2, plus3.Length);
+        Assert.Equal(plus3.Select(s => s.Id).Order(), sameInstantUtc.Select(s => s.Id).Order());
+        Assert.Equal(3, minus.Length); // 16:00-05:00 = 21:00Z
+        Assert.Equal(
+            [new DateTimeOffset(2026, 11, 3, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 11, 2, 21, 0, 0, TimeSpan.Zero)],
+            plus3.Select(s => s.TakenAt.ToUniversalTime()).ToArray()); // en yeniden eskiye; 20:59 ve 00:01 dışarıda
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.GetAsync("/api/admin/showings?from=0001-01-01T00:00:00%2B03:00")).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.GetAsync("/api/admin/showings?to=9999-12-31T23:59:59%2B03:00")).StatusCode);
     }
 
     [Theory]

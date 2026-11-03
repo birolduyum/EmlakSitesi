@@ -34,7 +34,7 @@ public class AdvisorTests : IClassFixture<ApiFactory>
 
     private async Task<Advisor> SeedAdvisorAsync(string name = "Ayşe Kaya", string phone = "+90 532 111 22 33", string? whatsapp = null, bool active = true)
     {
-        var a = new Advisor { Name = name, Phone = phone, WhatsApp = whatsapp, IsActive = active, CreatedAt = DateTime.UtcNow, CreatedBy = "admin1" };
+        var a = new Advisor { Name = name, Phone = phone, WhatsApp = whatsapp, IsActive = active, CreatedAt = DateTimeOffset.UtcNow, CreatedBy = "admin1" };
         await WithDbAsync(async db => { db.Advisors.Add(a); await db.SaveChangesAsync(); return 0; });
         return a;
     }
