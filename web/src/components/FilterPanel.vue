@@ -1,19 +1,19 @@
 <script setup>
-import { reactive, computed, watch, onBeforeUnmount } from 'vue'
+import { reactive, computed, watch, ref, nextTick } from 'vue'
 import { parseTrDecimal, parseTrInteger, INVALID_NUMBER_MESSAGE } from '../numbers.js'
 import { heatingLabels, furnishingLabels, typeLabels } from '../labels.js'
 
 const props = defineProps({
+  // Uygulanmış süzgeçler (adres çubuğundaki durum). Panel bunun bir TASLAĞINI tutar.
   modelValue: { type: Object, required: true },
   filters: { type: Object, default: () => ({ cities: [], districtsByCity: {}, roomCounts: {} }) },
-  // Yönetici modu: tür bölümüne "Hepsi" eklenir (seçilince type sorguda yer almaz).
-  allowAll: { type: Boolean, default: false }
+  // Tür bölümündeki "hepsi" seçeneğinin etiketi (seçilince type sorguda yer almaz): ziyaretçide "Tümü", yönetimde "Hepsi".
+  allLabel: { type: String, default: 'Tümü' }
 })
-const emit = defineEmits(['update:modelValue'])
+// update:modelValue → uygulanan yeni süzgeçler; applied → yalnızca "Filtreleri uygula" ile uygulandığında (ek olarak) yayılır.
+const emit = defineEmits(['update:modelValue', 'applied'])
 
-const DEBOUNCE_MS = 300
-
-// Yazılan alanlar: [anahtar, tür]. Seçim kutuları ve onay kutuları hemen yayar, bunlar bekler.
+// Yazılan alanlar: [anahtar, tür]. Taslakta metin olarak durur, uygulanırken sayıya çevrilir.
 const TYPED = [
   ['neighborhood', 'text'],
   ['minPriceTry', 'decimal'],
@@ -25,6 +25,9 @@ const TYPED = [
   ['minTotalFloors', 'integer'],
   ['maxTotalFloors', 'integer']
 ]
+const KINDS = Object.fromEntries(TYPED)
+// Taslağa girmeyen, sayfaya ait anahtarlar: uygulanırken sayfa her zaman 1'e döner.
+const PAGING = new Set(['page', 'pageSize'])
 
 const BATHROOMS = [
   ['', 'Tümü'],
@@ -64,101 +67,142 @@ function parseTyped(raw, kind) {
 
 function draftFrom(model) {
   const d = {}
+  for (const [key, value] of Object.entries(model)) {
+    if (PAGING.has(key) || value === undefined || value === null) continue
+    d[key] = Array.isArray(value) ? [...value] : value
+  }
   for (const [key] of TYPED) d[key] = model[key] === undefined || model[key] === null ? '' : String(model[key])
   return d
 }
 
 const draft = reactive(draftFrom(props.modelValue))
 
-// Dolu ama sayı olarak okunamayan alanlar süzgece girmez; sessizce yutulmasın diye satır içi uyarı gösterilir.
-const KINDS = Object.fromEntries(TYPED)
-const invalid = (key) => String(draft[key] ?? '').trim() !== '' && parseTyped(draft[key], KINDS[key]) === undefined
+function resetDraft(model) {
+  for (const key of Object.keys(draft)) delete draft[key]
+  Object.assign(draft, draftFrom(model))
+}
 
-// Adres çubuğu / geri tuşu değeri değiştirince taslakları eşitle (kullanıcı yazarken ezme).
+// Dış değişiklik (geri/ileri tuşu, tür geçişi, Temizle, sayfa bağlantısı, sıralama) → taslak adres çubuğundan yeniden kurulur;
+// uygulanmamış taslak atılır.
+// Yalnızca arama metni, sıralama ya da sayfa değiştiyse (arama kutusu, sıralama, sayfalama) taslağın geri kalanı korunur;
+// başka her değişiklik (geri/ileri, Temizle, dış gezinme) taslağı baştan kurar.
+const SOFT_KEYS = new Set(['text', 'sort', 'page'])
 watch(
   () => props.modelValue,
-  (model) => {
-    for (const [key, kind] of TYPED) {
-      if (parseTyped(draft[key], kind) !== model[key]) {
-        draft[key] = model[key] === undefined || model[key] === null ? '' : String(model[key])
+  (next, prev) => {
+    const keys = new Set([...Object.keys(next), ...Object.keys(prev ?? {})])
+    const changed = [...keys].filter((k) => JSON.stringify(next[k]) !== JSON.stringify(prev?.[k]))
+    if (changed.length > 0 && changed.every((k) => SOFT_KEYS.has(k))) {
+      for (const k of changed) {
+        if (k === 'page') continue
+        if (next[k] === undefined || next[k] === null || next[k] === '') delete draft[k]
+        else draft[k] = next[k]
       }
+      return
     }
-  },
-  { deep: true }
+    resetDraft(next)
+  }
 )
 
-let timer = null
-function cancelTimer() {
-  if (timer !== null) {
-    clearTimeout(timer)
-    timer = null
-  }
-}
-onBeforeUnmount(cancelTimer)
+const formEl = ref(null)
+const blocked = ref(false)
+// Dolu ama sayı olarak okunamayan alanlar süzgece girmez; sessizce yutulmasın diye satır içi uyarı gösterilir.
+const invalid = (key) => String(draft[key] ?? '').trim() !== '' && parseTyped(draft[key], KINDS[key]) === undefined
 
-function typedValues() {
-  const out = {}
+// Taslağın alanları (yazılanlar sayıya çevrilmiş) → uygulanacak süzgeç nesnesi.
+const built = computed(() => {
+  const next = {}
+  for (const [key, value] of Object.entries(draft)) {
+    if (key in KINDS) continue
+    if (value === undefined || value === null || value === '') continue
+    if (Array.isArray(value) && value.length === 0) continue
+    next[key] = Array.isArray(value) ? [...value] : value
+  }
   for (const [key, kind] of TYPED) {
     const v = parseTyped(draft[key], kind)
-    if (v !== undefined) out[key] = v
+    if (v !== undefined) next[key] = v
   }
-  return out
-}
+  return next
+})
 
-// Yazılan alanları (taslak) ve verilen değişikliği birleştirip yeni sorguyu yayar.
-function emitWith(patch = {}) {
-  cancelTimer()
-  const next = { ...props.modelValue }
-  for (const [key] of TYPED) delete next[key]
-  Object.assign(next, typedValues(), patch)
-  for (const key of Object.keys(next)) if (next[key] === undefined) delete next[key]
-  emit('update:modelValue', next)
+function canon(obj) {
+  const out = {}
+  for (const key of Object.keys(obj).sort()) {
+    if (PAGING.has(key)) continue
+    let v = obj[key]
+    if (typeof v === 'string') v = v.trim()
+    if (v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0)) continue
+    out[key] = v
+  }
+  return JSON.stringify(out)
+}
+const hasInvalid = computed(() => TYPED.some(([key]) => invalid(key)))
+watch(hasInvalid, (v) => {
+  if (!v) blocked.value = false
+})
+const dirty = computed(() => canon(built.value) !== canon(props.modelValue))
+
+function setDraft(key, value) {
+  if (value === undefined || value === null || value === '') delete draft[key]
+  else draft[key] = value
 }
 
 function onTyped(key, event) {
   draft[key] = event.target.value
-  cancelTimer()
-  timer = setTimeout(() => emitWith(), DEBOUNCE_MS)
-}
-
-function setType(type) {
-  emitWith({ type: type || undefined })
 }
 function setCurrency(currency) {
-  emitWith({ currency: currency || undefined })
+  setDraft('currency', currency)
 }
 function onCity(event) {
-  const city = event.target.value || undefined
-  emitWith({ city, district: undefined })
+  setDraft('city', event.target.value)
+  delete draft.district
 }
 function onSelect(key, event) {
-  emitWith({ [key]: event.target.value || undefined })
+  setDraft(key, event.target.value)
 }
 function onBathrooms(event) {
   const n = Number(event.target.value)
-  emitWith({ minBathrooms: Number.isInteger(n) && n > 0 ? n : undefined })
+  setDraft('minBathrooms', Number.isInteger(n) && n > 0 ? n : undefined)
 }
 function onFeature(key, event) {
-  emitWith({ [key]: event.target.checked ? true : undefined })
+  setDraft(key, event.target.checked ? true : undefined)
 }
 function toggleRoom(room, checked) {
-  const current = props.modelValue.rooms ?? []
+  const current = draft.rooms ?? []
   const next = checked ? [...current.filter((r) => r !== room), room] : current.filter((r) => r !== room)
   // Seçim sırası değil, listedeki sıra korunur
-  const ordered = roomOptions.value.map((o) => o.room).filter((r) => next.includes(r))
-  emitWith({ rooms: ordered.length ? ordered : undefined })
+  setDraft('rooms', roomOptions.value.map((o) => o.room).filter((r) => next.includes(r)))
 }
 
+// Tür de bir taslak alanıdır: "Filtreleri uygula" ile diğer alanlarla birlikte uygulanır.
+function setType(type) {
+  setDraft('type', type)
+}
+
+// "Filtreleri uygula" / Enter: bütün taslak tek seferde uygulanır. Değişiklik yoksa hiçbir şey yapılmaz.
+function apply() {
+  const bad = TYPED.map(([key]) => key).find(invalid)
+  if (bad) {
+    // Okunamayan sayı sessizce atlanmaz: uygulama engellenir, ilk hatalı alana odaklanılır.
+    blocked.value = true
+    nextTick(() => formEl.value?.querySelector(`[name="${bad}"]`)?.focus())
+    return
+  }
+  if (!dirty.value) return
+  emit('update:modelValue', { ...built.value })
+  emit('applied')
+}
+
+// Temizle: taslağı (tür dahil) sıfırlar ve hemen uygular.
 function clearAll() {
-  cancelTimer()
-  for (const [key] of TYPED) draft[key] = ''
-  emit('update:modelValue', { type: props.modelValue.type })
+  resetDraft({})
+  emit('update:modelValue', {})
 }
 
-const typeOptions = computed(() => [...(props.allowAll ? [['', 'Hepsi']] : []), ...Object.entries(typeLabels)])
+const typeOptions = computed(() => [['', props.allLabel], ...Object.entries(typeLabels)])
 
 const districts = computed(() => {
-  const city = props.modelValue.city
+  const city = draft.city
   return city ? props.filters.districtsByCity?.[city] ?? [] : []
 })
 
@@ -170,34 +214,34 @@ const roomOptions = computed(() =>
 </script>
 
 <template>
-  <form class="filters" aria-label="Filtreler" @submit.prevent>
+  <form ref="formEl" class="filters" aria-label="Filtreler" @submit.prevent="apply">
     <fieldset class="segmented">
       <legend class="sr-only">İlan türü</legend>
-      <label v-for="[value, label] in typeOptions" :key="value" :class="{ on: (modelValue.type ?? '') === value }">
+      <label v-for="[value, label] in typeOptions" :key="value" :class="{ on: (draft.type ?? '') === value }">
         <input
           type="radio"
           name="type"
           :value="value"
-          :checked="(modelValue.type ?? '') === value"
+          :checked="(draft.type ?? '') === value"
           @change="setType(value)"
         />
         <span>{{ label }}</span>
       </label>
     </fieldset>
 
-    <slot name="extra"></slot>
+    <slot name="extra" :draft="draft" :set="setDraft"></slot>
 
     <div class="group">
       <label class="field">
         <span>İl</span>
-        <select name="city" :value="modelValue.city ?? ''" @change="onCity">
+        <select name="city" :value="draft.city ?? ''" @change="onCity">
           <option value="">Tüm İller</option>
           <option v-for="c in filters.cities ?? []" :key="c" :value="c">{{ c }}</option>
         </select>
       </label>
       <label class="field">
         <span>İlçe</span>
-        <select name="district" :value="modelValue.district ?? ''" :disabled="!modelValue.city" @change="onSelect('district', $event)">
+        <select name="district" :value="draft.district ?? ''" :disabled="!draft.city" @change="onSelect('district', $event)">
           <option value="">Tüm İlçeler</option>
           <option v-for="d in districts" :key="d" :value="d">{{ d }}</option>
         </select>
@@ -216,7 +260,7 @@ const roomOptions = computed(() =>
             type="radio"
             name="currency"
             :value="value"
-            :checked="(modelValue.currency ?? '') === value"
+            :checked="(draft.currency ?? '') === value"
             @change="setCurrency(value)"
           />
           <span>{{ label }}</span>
@@ -238,6 +282,7 @@ const roomOptions = computed(() =>
           <small v-if="invalid('maxPriceTry')" class="err" role="alert">{{ INVALID_NUMBER_MESSAGE }}</small>
         </label>
       </div>
+      <p v-if="!draft.type" class="hint-text" data-testid="price-hint">Satılık fiyatları ve aylık kiralar birlikte süzülür.</p>
     </fieldset>
 
     <fieldset v-if="roomOptions.length" class="group">
@@ -248,7 +293,7 @@ const roomOptions = computed(() =>
             type="checkbox"
             name="rooms"
             :value="o.room"
-            :checked="(modelValue.rooms ?? []).includes(o.room)"
+            :checked="(draft.rooms ?? []).includes(o.room)"
             @change="toggleRoom(o.room, $event.target.checked)"
           />
           <span>{{ o.room }} ({{ o.count }})</span>
@@ -301,20 +346,20 @@ const roomOptions = computed(() =>
       </label>
       <label class="field">
         <span>Banyo sayısı</span>
-        <select name="minBathrooms" :value="modelValue.minBathrooms === undefined ? '' : String(modelValue.minBathrooms)" @change="onBathrooms">
+        <select name="minBathrooms" :value="draft.minBathrooms === undefined ? '' : String(draft.minBathrooms)" @change="onBathrooms">
           <option v-for="[value, label] in BATHROOMS" :key="value" :value="value">{{ label }}</option>
         </select>
       </label>
       <label class="field">
         <span>Isıtma</span>
-        <select name="heating" :value="modelValue.heating ?? ''" @change="onSelect('heating', $event)">
+        <select name="heating" :value="draft.heating ?? ''" @change="onSelect('heating', $event)">
           <option value="">Hepsi</option>
           <option v-for="(label, value) in heatingLabels" :key="value" :value="value">{{ label }}</option>
         </select>
       </label>
       <label class="field">
         <span>Eşya durumu</span>
-        <select name="furnishing" :value="modelValue.furnishing ?? ''" @change="onSelect('furnishing', $event)">
+        <select name="furnishing" :value="draft.furnishing ?? ''" @change="onSelect('furnishing', $event)">
           <option value="">Hepsi</option>
           <option v-for="(label, value) in furnishingLabels" :key="value" :value="value">{{ label }}</option>
         </select>
@@ -325,13 +370,20 @@ const roomOptions = computed(() =>
       <legend>Özellikler</legend>
       <div class="choices">
         <label v-for="[key, label] in FEATURES" :key="key" class="choice">
-          <input type="checkbox" :name="key" :checked="modelValue[key] === true" @change="onFeature(key, $event)" />
+          <input type="checkbox" :name="key" :checked="draft[key] === true" @change="onFeature(key, $event)" />
           <span>{{ label }}</span>
         </label>
       </div>
     </fieldset>
 
-    <button type="button" class="secondary clear" data-testid="clear" @click="clearAll">Temizle</button>
+    <div class="actions">
+      <p class="unapplied" aria-live="polite" data-testid="unapplied">{{ dirty ? 'Uygulanmamış değişiklikler var' : '' }}</p>
+      <p class="blocked err" aria-live="polite" data-testid="invalid-msg">{{ blocked && hasInvalid ? 'Geçersiz sayı var; düzeltin' : '' }}</p>
+      <div class="buttons">
+        <button type="button" class="secondary clear" data-testid="clear" @click="clearAll">Temizle</button>
+        <button type="submit" class="apply" :class="{ dirty }" data-testid="apply">Filtreleri uygula</button>
+      </div>
+    </div>
   </form>
 </template>
 
@@ -447,7 +499,59 @@ select:disabled {
   color: var(--danger, #b91c1c);
   font-size: 0.8125rem;
 }
-.clear {
-  align-self: stretch;
+.hint-text {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+.actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin: 0 -1rem -1rem;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 var(--radius) var(--radius);
+  background: #fff;
+}
+.blocked {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.blocked:empty {
+  display: none;
+}
+.unapplied {
+  margin: 0;
+  min-height: 1.25em;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--green-900);
+}
+.buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+.apply {
+  flex: 1 1 auto;
+}
+.apply:not(.dirty) {
+  background: #fff;
+  color: var(--green-700);
+}
+.apply:not(.dirty):hover {
+  background: var(--green-50);
+}
+.apply.dirty {
+  font-weight: 700;
+  box-shadow: 0 0 0 3px var(--green-100);
+}
+.actions button:focus-visible {
+  outline: 2px solid var(--green-600);
+  outline-offset: 2px;
 }
 </style>

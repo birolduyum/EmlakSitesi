@@ -1,6 +1,6 @@
 # Emlak Sitesi
 
-Satılık ve kiralık konut ilanlarının listelendiği bir emlak sitesi. Ziyaretçiler ilanları süzer ve inceler; yönetici ve saha hesapları ilan, fotoğraf, kur ve ev gösterme kayıtlarını yönetir. Arayüz Türkçedir.
+Satılık ve kiralık konut ilanlarının listelendiği bir emlak sitesi. Ziyaretçiler ilanları süzer ve inceler; yönetici ve saha hesapları ilan, fotoğraf, kur ve ev gösterme kayıtlarını yönetir. Arayüz Türkçedir. Ziyaretçi ana sayfası varsayılan olarak **Tümü** (satılık ve kiralık birlikte) listeler; tür, süzgeç panelinden seçilir.
 
 - **web**: Vue 3 (Vite), nginx ile sunulur
 - **api**: C# / ASP.NET Core (.NET 10), Entity Framework Core, JWT ile giriş

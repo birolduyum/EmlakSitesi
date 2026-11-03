@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { routeQueryToParams, paramsToRouteQuery } from '../query.js'
 
 describe('routeQueryToParams', () => {
-  it('defaults to Satilik, page 1, pageSize 20', () => {
-    expect(routeQueryToParams({})).toEqual({ type: 'Satilik', page: 1, pageSize: 20 })
+  it('has no default type (Tümü), page 1, pageSize 20', () => {
+    expect(routeQueryToParams({})).toEqual({ page: 1, pageSize: 20 })
   })
   it('parses numbers, booleans and enums', () => {
     const p = routeQueryToParams({
@@ -17,7 +17,7 @@ describe('routeQueryToParams', () => {
   })
   it('ignores NaN, negative and empty numbers', () => {
     const p = routeQueryToParams({ minPriceTry: 'abc', maxPriceTry: '-5', minM2: '', maxBuildingAge: '-1', floor: 'x', page: '0' })
-    expect(p).toEqual({ type: 'Satilik', page: 1, pageSize: 20 })
+    expect(p).toEqual({ page: 1, pageSize: 20 })
   })
   it('reads_Turkish_grouped_numbers_from_the_URL', () => {
     const p = routeQueryToParams({ maxPriceTry: '5.000.000', minPriceTry: '1.250,5', maxM2: '1.200' })
@@ -26,14 +26,14 @@ describe('routeQueryToParams', () => {
   it('parses_bathroom_and_building_floor_count_filters', () => {
     const p = routeQueryToParams({ minBathrooms: '2', minTotalFloors: '5', maxTotalFloors: '12' })
     expect(p).toMatchObject({ minBathrooms: 2, minTotalFloors: 5, maxTotalFloors: 12 })
-    expect(routeQueryToParams({ minBathrooms: 'x', minTotalFloors: '-1', maxTotalFloors: '' })).toEqual({ type: 'Satilik', page: 1, pageSize: 20 })
+    expect(routeQueryToParams({ minBathrooms: 'x', minTotalFloors: '-1', maxTotalFloors: '' })).toEqual({ page: 1, pageSize: 20 })
     expect(paramsToRouteQuery({ minBathrooms: 3, minTotalFloors: 4, maxTotalFloors: 9 }))
       .toEqual({ minBathrooms: '3', minTotalFloors: '4', maxTotalFloors: '9' })
     expect(routeQueryToParams(paramsToRouteQuery(p))).toEqual(p)
   })
   it('ignores bad enums and false booleans', () => {
     const p = routeQueryToParams({ type: 'Arsa', heating: 'Nuclear', currency: 'GBP', sort: 'Random', balcony: 'false', swap: '1' })
-    expect(p).toEqual({ type: 'Satilik', page: 1, pageSize: 20 })
+    expect(p).toEqual({ page: 1, pageSize: 20 })
   })
   it('rooms: single string becomes an array, array stays', () => {
     expect(routeQueryToParams({ rooms: '2+1' }).rooms).toEqual(['2+1'])
@@ -42,13 +42,14 @@ describe('routeQueryToParams', () => {
   })
   it('drops unknown keys', () => {
     const p = routeQueryToParams({ evil: '1', status: 'All', ownerText: 'x', pageSize: '500' })
-    expect(p).toEqual({ type: 'Satilik', page: 1, pageSize: 20 })
+    expect(p).toEqual({ page: 1, pageSize: 20 })
   })
 })
 
 describe('paramsToRouteQuery', () => {
   it('omits defaults', () => {
-    expect(paramsToRouteQuery({ type: 'Satilik', page: 1, pageSize: 20, sort: 'Newest' })).toEqual({})
+    expect(paramsToRouteQuery({ page: 1, pageSize: 20, sort: 'Newest' })).toEqual({})
+    expect(paramsToRouteQuery({ type: 'Satilik', page: 1, pageSize: 20 })).toEqual({ type: 'Satilik' })
   })
   it('writes strings, booleans and repeated rooms', () => {
     expect(paramsToRouteQuery({ type: 'Kiralik', page: 2, minPriceTry: 5000, balcony: true, rooms: ['2+1', '3+1'] }))
@@ -65,5 +66,17 @@ describe('paramsToRouteQuery', () => {
   })
   it('drops NaN/negative on the way out', () => {
     expect(paramsToRouteQuery({ minM2: NaN, maxM2: -3, page: 'x' })).toEqual({})
+  })
+})
+
+describe('price sorts in Tümü mode', () => {
+  it('tumu_hides_price_sorts_and_falls_back: PriceAsc/PriceDesc without type are dropped', () => {
+    expect(routeQueryToParams({ sort: 'PriceAsc' })).toEqual({ page: 1, pageSize: 20 })
+    expect(routeQueryToParams({ sort: 'PriceDesc' })).toEqual({ page: 1, pageSize: 20 })
+    expect(paramsToRouteQuery({ sort: 'PriceAsc' })).toEqual({})
+  })
+  it('price sorts are kept when a type is chosen', () => {
+    expect(routeQueryToParams({ type: 'Kiralik', sort: 'PriceAsc' }).sort).toBe('PriceAsc')
+    expect(routeQueryToParams({ type: 'Satilik', sort: 'PriceDesc' }).sort).toBe('PriceDesc')
   })
 })

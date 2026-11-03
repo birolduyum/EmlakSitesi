@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api.js'
 import { routeQueryToParams, paramsToRouteQuery } from '../query.js'
 import { sortLabels, typeLabels } from '../labels.js'
+import { useFilterPanelHost } from '../composables/useFilterPanelHost.js'
 import FilterPanel from '../components/FilterPanel.vue'
 import ListingRow from '../components/ListingRow.vue'
 import Pagination from '../components/Pagination.vue'
@@ -15,13 +16,19 @@ const router = useRouter()
 
 // Bütün arama durumu URL'de; sayfa yalnızca onu okur ve yazar.
 const params = computed(() => routeQueryToParams(route.query))
-const title = computed(() => `${typeLabels[params.value.type]} Daire`)
+const title = computed(() => (params.value.type ? `${typeLabels[params.value.type]} Daire` : 'Tüm İlanlar'))
+const allTypes = computed(() => !params.value.type)
+// Tümü modunda satış fiyatı ile aylık kira karşılaştırılamaz: fiyat sıralamaları gizlenir.
+const sortOptions = computed(() =>
+  Object.entries(sortLabels).filter(([value]) => !(allTypes.value && (value === 'PriceAsc' || value === 'PriceDesc')))
+)
+
+const { filtersOpen, resultsEl, onApplied, activeFilterCount } = useFilterPanelHost(params)
 
 const items = ref([])
 const total = ref(null)
 const status = ref('loading') // loading | ready | error
 const filters = ref({ cities: [], districtsByCity: {}, roomCounts: {} })
-const filtersOpen = ref(false)
 const searchText = ref(params.value.text ?? '')
 const countFormat = new Intl.NumberFormat('tr-TR')
 
@@ -51,7 +58,7 @@ const sortedTr = (list) => [...(list ?? [])].sort(byTr)
 async function loadFilters(type) {
   const id = ++filtersRequest
   try {
-    const data = await api.get('/api/listings/filters', { type })
+    const data = await api.get('/api/listings/filters', type ? { type } : {})
     if (id !== filtersRequest) return
     filters.value = {
       cities: sortedTr(data?.cities),
@@ -119,13 +126,9 @@ function goToPage(page) {
 function clearFilters() {
   clearTimeout(searchTimer)
   searchText.value = ''
-  applyFilters({ type: params.value.type })
+  applyFilters({})
 }
 
-const activeFilterCount = computed(() => {
-  const ignored = new Set(['type', 'page', 'pageSize', 'sort', 'text'])
-  return Object.keys(params.value).filter((k) => !ignored.has(k)).length
-})
 
 const countText = computed(() => (total.value === null ? '' : `${countFormat.format(total.value)} ilan bulundu`))
 const showSkeleton = computed(() => status.value === 'loading' && items.value.length === 0)
@@ -146,10 +149,10 @@ const showList = computed(() => status.value !== 'error' && items.value.length >
     </button>
 
     <aside id="filter-panel" class="side" :class="{ open: filtersOpen }" aria-label="Filtreler paneli">
-      <FilterPanel :model-value="params" :filters="filters" @update:model-value="applyFilters" />
+      <FilterPanel :model-value="params" :filters="filters" @update:model-value="applyFilters" @applied="onApplied" />
     </aside>
 
-    <section class="results">
+    <section ref="resultsEl" class="results">
       <nav class="breadcrumb" aria-label="Sayfa yolu">
         <ol>
           <li><router-link to="/">Ana Sayfa</router-link></li>
@@ -177,7 +180,7 @@ const showList = computed(() => status.value !== 'error' && items.value.length >
           <label class="sort">
             <span class="sr-only">Sıralama</span>
             <select name="sort" :value="params.sort ?? 'Newest'" @change="onSort">
-              <option v-for="(label, value) in sortLabels" :key="value" :value="value">{{ label }}</option>
+              <option v-for="[value, label] in sortOptions" :key="value" :value="value">{{ label }}</option>
             </select>
           </label>
         </div>
@@ -201,7 +204,7 @@ const showList = computed(() => status.value !== 'error' && items.value.length >
       </div>
 
       <div v-if="showList" class="list" :class="{ stale: status === 'loading' }" :aria-busy="status === 'loading'">
-        <ListingRow v-for="l in items" :key="l.id" :listing="l" />
+        <ListingRow v-for="l in items" :key="l.id" :listing="l" :show-type="allTypes" />
       </div>
 
       <Pagination

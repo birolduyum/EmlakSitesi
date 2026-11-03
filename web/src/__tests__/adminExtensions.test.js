@@ -5,24 +5,27 @@ import FilterPanel from '../components/FilterPanel.vue'
 import ListingRow from '../components/ListingRow.vue'
 import { adminRouteQueryToParams, adminParamsToRouteQuery, routeQueryToParams } from '../query.js'
 
-describe('FilterPanel admin mode', () => {
-  it('allowAll adds a Hepsi option; selecting it removes type; the extra slot renders', async () => {
+describe('FilterPanel type options', () => {
+  it('admin label Hepsi, the extra slot renders; choosing Hepsi + apply removes type', async () => {
     const w = mount(FilterPanel, {
-      props: { modelValue: { type: 'Kiralik' }, allowAll: true },
+      props: { modelValue: { type: 'Kiralik' }, allLabel: 'Hepsi' },
       slots: { extra: '<p data-testid="slot">ek süzgeç</p>' }
     })
     const radios = w.findAll('input[type="radio"][name="type"]')
     expect(radios.map((r) => r.attributes('value'))).toEqual(['', 'Satilik', 'Kiralik'])
+    expect(w.findAll('fieldset.segmented label').map((l) => l.text())).toEqual(['Hepsi', 'Satılık', 'Kiralık'])
     expect(w.find('[data-testid="slot"]').text()).toBe('ek süzgeç')
     await w.find('input[type="radio"][name="type"][value=""]').setValue()
+    expect(w.emitted('update:modelValue')).toBeUndefined() // taslak: uygulanana kadar yayılmaz
+    await w.find('form').trigger('submit')
     expect(w.emitted('update:modelValue').at(-1)[0]).not.toHaveProperty('type')
   })
-  it('without allowAll there is no Hepsi option (visitor behaviour unchanged)', () => {
-    const w = mount(FilterPanel, { props: { modelValue: { type: 'Satilik' } } })
-    expect(w.findAll('input[type="radio"][name="type"]')).toHaveLength(2)
+  it('the visitor panel labels the all-option Tümü', () => {
+    const w = mount(FilterPanel, { props: { modelValue: {} } })
+    expect(w.findAll('fieldset.segmented label').map((l) => l.text())).toEqual(['Tümü', 'Satılık', 'Kiralık'])
   })
-  it('with allowAll and no type, Hepsi is the checked option', () => {
-    const w = mount(FilterPanel, { props: { modelValue: {}, allowAll: true } })
+  it('with no type, the all-option is the checked one', () => {
+    const w = mount(FilterPanel, { props: { modelValue: {} } })
     expect(w.find('input[type="radio"][name="type"][value=""]').element.checked).toBe(true)
   })
 })
@@ -65,6 +68,6 @@ describe('admin query helpers', () => {
     expect(adminParamsToRouteQuery({ page: 1 })).toEqual({})
   })
   it('the visitor query is not affected by the admin keys', () => {
-    expect(routeQueryToParams({ status: 'All', ownerText: 'x' })).toEqual({ type: 'Satilik', page: 1, pageSize: 20 })
+    expect(routeQueryToParams({ status: 'All', ownerText: 'x' })).toEqual({ page: 1, pageSize: 20 })
   })
 })

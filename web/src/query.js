@@ -55,10 +55,9 @@ function parseRooms(value) {
 // Ham değerleri (URL dizgeleri ya da yazılı değerler) API parametrelerine çevirir; bilinmeyen anahtarlar düşer.
 function normalize(raw, admin = false) {
   const out = {}
-  // Ziyaretçi listesinde tür her zaman vardır (varsayılan Satılık); yönetici listesinde yoksa iki tür birden gelir.
+  // Tür yoksa iki tür birden listelenir (ziyaretçide de yönetimde de); varsayılan tür yoktur.
   const type = parseEnum(raw.type, typeLabels)
   if (type) out.type = type
-  else if (!admin) out.type = 'Satilik'
   const page = parseNumber(raw.page, { integer: true })
   out.page = page && page >= 1 ? page : 1
   out.pageSize = PAGE_SIZE
@@ -88,7 +87,9 @@ function normalize(raw, admin = false) {
     if (v === true || v === 'true') out[k] = true
   }
   const sort = parseEnum(raw.sort, sortLabels)
-  if (sort && sort !== 'Newest') out.sort = sort
+  // Tümü modunda satış fiyatı ile aylık kira karşılaştırılamaz: fiyat sıralaması düşer (yeniden eskiye).
+  const priceSort = sort === 'PriceAsc' || sort === 'PriceDesc'
+  if (sort && sort !== 'Newest' && !(priceSort && !out.type && !admin)) out.sort = sort
   if (admin) {
     const status = parseEnum(raw.status, statusLabels)
     if (status && status !== 'Active') out.status = status
@@ -111,7 +112,6 @@ function toRouteQuery(p, admin) {
   const q = {}
   for (const [key, value] of Object.entries(p)) {
     if (key === 'pageSize') continue
-    if (!admin && key === 'type' && value === 'Satilik') continue
     if (key === 'page' && value === 1) continue
     q[key] = Array.isArray(value) ? value.slice() : String(value)
   }

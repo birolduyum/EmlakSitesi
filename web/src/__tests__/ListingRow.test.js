@@ -74,3 +74,13 @@ describe('ListingRow', () => {
     expect(w.text()).toContain('Deniz manzaralı 3+1')
   })
 })
+
+describe('ListingRow type label', () => {
+  it('shows Satılık/Kiralık next to the title only when showType is set', async () => {
+    const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/:p(.*)*', component: { template: '<i/>' } }] })
+    const on = mount(ListingRow, { props: { listing: { ...listing, type: 'Kiralik' }, showType: true }, global: { plugins: [router] } })
+    expect(on.find('[data-testid="type-tag"]').text()).toBe('Kiralık')
+    const off = mount(ListingRow, { props: { listing }, global: { plugins: [router] } })
+    expect(off.find('[data-testid="type-tag"]').exists()).toBe(false)
+  })
+})

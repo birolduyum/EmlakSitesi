@@ -104,30 +104,46 @@ describe('AdminListView', () => {
     expect(deleted.text()).toContain('Geri al')
     expect(deleted.findAll('button').map((b) => b.text())).toEqual(['Geri al'])
   })
-  it('status_filter_sends_status_param', async () => {
+  const submit = async (w) => {
+    await w.find('#filter-panel form').trigger('submit')
+    await flushPromises()
+  }
+  it('status_filter_sends_status_param only after apply', async () => {
     const { w, router } = await make()
     await w.find('select[name="status"]').setValue('Deleted')
     await flushPromises()
+    expect(listCalls()).toHaveLength(1)
+    await submit(w)
+    expect(listCalls()).toHaveLength(2)
     expect(listCalls().at(-1)[1]).toMatchObject({ status: 'Deleted', page: 1 })
     expect(router.currentRoute.value.query.status).toBe('Deleted')
   })
-  it('owner_search_sends_ownerText_after_debounce', async () => {
-    const { w } = await make()
-    vi.useFakeTimers()
-    try {
-      await w.find('input[name="ownerText"]').setValue('Kaya')
-      await vi.advanceTimersByTimeAsync(400)
-    } finally {
-      vi.useRealTimers()
-    }
+  it('admin_slot_fields_are_part_of_draft: status + owner + filters apply with one request', async () => {
+    const { w, router } = await make('Admin', '/admin?page=2')
+    await w.find('select[name="status"]').setValue('All')
+    await w.find('input[name="ownerText"]').setValue('Kaya')
+    await w.find('input[name="balcony"]').setValue(true)
+    await w.find('input[name="type"][value="Kiralik"]').setValue()
     await flushPromises()
-    expect(listCalls().at(-1)[1]).toMatchObject({ ownerText: 'Kaya', page: 1 })
+    expect(listCalls()).toHaveLength(1)
+    expect(w.find('[data-testid="unapplied"]').text()).toContain('Uygulanmamış')
+    await submit(w)
+    expect(listCalls()).toHaveLength(2)
+    expect(listCalls().at(-1)[1]).toEqual({ type: 'Kiralik', status: 'All', ownerText: 'Kaya', balcony: true, page: 1, pageSize: 20 })
+    expect(router.currentRoute.value.query).toEqual({ type: 'Kiralik', status: 'All', ownerText: 'Kaya', balcony: 'true' })
   })
-  it('type_hepsi_omits_type_param', async () => {
+  it('selecting Active again is not an unapplied change', async () => {
+    const { w } = await make()
+    await w.find('select[name="status"]').setValue('Deleted')
+    await w.find('select[name="status"]').setValue('Active')
+    expect(w.find('[data-testid="unapplied"]').text()).toBe('')
+  })
+  it('type Hepsi is a draft: omits type once applied', async () => {
     const { w } = await make('Admin', '/admin?type=Kiralik')
     expect(listCalls().at(-1)[1].type).toBe('Kiralik')
     await w.find('input[type="radio"][name="type"][value=""]').setValue()
-    await flushPromises()
+    expect(listCalls()).toHaveLength(1)
+    await submit(w)
     expect(listCalls().at(-1)[1]).not.toHaveProperty('type')
   })
   it('delete_asks_confirmation_then_calls_api_then_reloads', async () => {

@@ -5,6 +5,7 @@ import { api } from '../../api.js'
 import { isAdmin } from '../../auth.js'
 import { adminRouteQueryToParams, adminParamsToRouteQuery } from '../../query.js'
 import { sortLabels, statusLabels } from '../../labels.js'
+import { useFilterPanelHost } from '../../composables/useFilterPanelHost.js'
 import FilterPanel from '../../components/FilterPanel.vue'
 import ListingRow from '../../components/ListingRow.vue'
 import Pagination from '../../components/Pagination.vue'
@@ -27,13 +28,13 @@ const params = computed(() => {
   return p
 })
 
+const { filtersOpen, resultsEl, onApplied, activeFilterCount } = useFilterPanelHost(params)
+
 const items = ref([])
 const total = ref(null)
 const state = ref('loading') // loading | ready | error
 const filters = ref({ cities: [], districtsByCity: {}, roomCounts: {} })
-const filtersOpen = ref(false)
 const searchText = ref(params.value.text ?? '')
-const ownerDraft = ref(params.value.ownerText ?? '')
 const toast = ref('')
 const pending = ref(null) // { kind: 'delete', listing }
 const countFormat = new Intl.NumberFormat('tr-TR')
@@ -41,7 +42,6 @@ const countFormat = new Intl.NumberFormat('tr-TR')
 let listRequest = 0
 let filtersRequest = 0
 let searchTimer = null
-let ownerTimer = null
 
 async function load() {
   const id = ++listRequest
@@ -91,25 +91,17 @@ watch(
 )
 watch(() => params.value.type, (type) => loadFilters(type), { immediate: true })
 
-// Yazı kutuları adres çubuğuyla (geri tuşu, Temizle) eşit kalır.
+// Arama kutusu adres çubuğuyla (geri tuşu, Temizle) eşit kalır.
 watch(
   () => params.value.text,
   (text) => {
     if ((text ?? '') !== searchText.value.trim()) searchText.value = text ?? ''
   }
 )
-watch(
-  () => params.value.ownerText,
-  (text) => {
-    if ((text ?? '') !== ownerDraft.value.trim()) ownerDraft.value = text ?? ''
-  }
-)
-
 onBeforeUnmount(() => {
   listRequest++
   filtersRequest++
   clearTimeout(searchTimer)
-  clearTimeout(ownerTimer)
 })
 
 function writeQuery(next) {
@@ -127,13 +119,6 @@ function submitSearch() {
   clearTimeout(searchTimer)
   applyFilters({ ...params.value, text: searchText.value })
 }
-function onOwnerInput() {
-  clearTimeout(ownerTimer)
-  ownerTimer = setTimeout(() => applyFilters({ ...params.value, ownerText: ownerDraft.value }), DEBOUNCE_MS)
-}
-function onStatus(event) {
-  applyFilters({ ...params.value, status: event.target.value })
-}
 function onSort(event) {
   applyFilters({ ...params.value, sort: event.target.value })
 }
@@ -143,11 +128,10 @@ function goToPage(page) {
 }
 function clearFilters() {
   clearTimeout(searchTimer)
-  clearTimeout(ownerTimer)
   searchText.value = ''
-  ownerDraft.value = ''
-  applyFilters({ type: params.value.type })
+  applyFilters({})
 }
+
 async function confirmDelete() {
   const listing = pending.value?.listing
   pending.value = null
@@ -171,10 +155,6 @@ async function restore(listing) {
   }
 }
 
-const activeFilterCount = computed(() => {
-  const ignored = new Set(['type', 'page', 'pageSize', 'sort', 'text'])
-  return Object.keys(params.value).filter((k) => !ignored.has(k)).length
-})
 const countText = computed(() => (total.value === null ? '' : `${countFormat.format(total.value)} ilan bulundu`))
 const showSkeleton = computed(() => state.value === 'loading' && items.value.length === 0)
 const showEmpty = computed(() => state.value === 'ready' && items.value.length === 0)
@@ -197,21 +177,21 @@ const deleteMessage = computed(
     </button>
 
     <aside id="filter-panel" class="side" :class="{ open: filtersOpen }" aria-label="Filtreler paneli">
-      <FilterPanel :model-value="params" :filters="filters" allow-all @update:model-value="applyFilters">
-        <template v-if="admin" #extra>
+      <FilterPanel :model-value="params" :filters="filters" all-label="Hepsi" @update:model-value="applyFilters" @applied="onApplied">
+        <template v-if="admin" #extra="{ draft, set }">
           <div class="admin-filters af-field">
             <label for="status-filter">Durum</label>
-            <select id="status-filter" name="status" :value="params.status ?? 'Active'" @change="onStatus">
+            <select id="status-filter" name="status" :value="draft.status ?? 'Active'" @change="set('status', $event.target.value === 'Active' ? undefined : $event.target.value)">
               <option v-for="(label, value) in statusLabels" :key="value" :value="value">{{ label }}</option>
             </select>
             <label for="owner-filter">Ev sahibi (ad veya telefon)</label>
-            <input id="owner-filter" v-model="ownerDraft" name="ownerText" type="search" autocomplete="off" @input="onOwnerInput" />
+            <input id="owner-filter" name="ownerText" type="search" autocomplete="off" :value="draft.ownerText ?? ''" @input="set('ownerText', $event.target.value)" />
           </div>
         </template>
       </FilterPanel>
     </aside>
 
-    <section class="results">
+    <section ref="resultsEl" class="results">
       <header class="head">
         <div class="headline">
           <h1>İlan Yönetimi</h1>
@@ -259,6 +239,7 @@ const deleteMessage = computed(
           :link-to="admin ? `/admin/ilan/${l.id}` : null"
           :deleted="l.isDeleted === true"
           :show-advisor="false"
+          :show-type="!params.type"
         >
           <template v-if="admin" #meta>
             <p v-if="l.owner" class="owner">Ev sahibi: {{ l.owner.name }} · {{ l.owner.phone }}</p>
