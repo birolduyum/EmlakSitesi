@@ -67,6 +67,23 @@ public class PublicApiTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task Detail_ExposesUpdatedAt_FallingBackToCreatedAt()
+    {
+        var client = await FreshClientAsync();
+        var created = new DateTime(2026, 3, 1, 10, 0, 0, DateTimeKind.Utc);
+        var updated = new DateTime(2026, 4, 2, 11, 30, 0, DateTimeKind.Utc);
+        var untouched = await SeedListingAsync(new ListingBuilder().CreatedAt(created));
+        var edited = await SeedListingAsync(new ListingBuilder().CreatedAt(created).UpdatedAt(updated));
+
+        var a = await client.GetFromJsonAsync<JsonElement>($"/api/listings/{untouched.Id}");
+        var b = await client.GetFromJsonAsync<JsonElement>($"/api/listings/{edited.Id}");
+
+        Assert.Equal(created, a.GetProperty("updatedAt").GetDateTime().ToUniversalTime());
+        Assert.Equal(updated, b.GetProperty("updatedAt").GetDateTime().ToUniversalTime());
+        Assert.False(b.TryGetProperty("updatedBy", out _));
+    }
+
+    [Fact]
     public async Task List_Json_ContainsNoOwnerFields()
     {
         var client = await FreshClientAsync();

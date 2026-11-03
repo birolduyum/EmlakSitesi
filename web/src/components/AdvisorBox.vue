@@ -1,27 +1,7 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { getSiteInfo } from '../site.js'
+import { useAdvisor } from '../composables/useAdvisor.js'
 
-const info = ref(null)
-let alive = true
-
-onMounted(async () => {
-  try {
-    const data = await getSiteInfo()
-    if (alive && data) info.value = data
-  } catch {
-    // Danışman kutusu yalnızca bir kolaylıktır; hata olursa boş kalır.
-  }
-})
-onBeforeUnmount(() => {
-  alive = false
-})
-
-const telHref = computed(() => {
-  const phone = info.value?.advisorPhone
-  const digits = typeof phone === 'string' ? phone.replace(/[^\d+]/g, '') : ''
-  return digits ? `tel:${digits}` : null
-})
+const { info, telHref } = useAdvisor()
 </script>
 
 <template>

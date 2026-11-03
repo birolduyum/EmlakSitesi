@@ -18,7 +18,7 @@ public record PublicListingDetail(
     decimal? Deposit, decimal? Aidat, string Neighborhood, int Bathrooms, int NetM2, int TotalFloors, int BuildingAge,
     HeatingType Heating, FurnishingStatus Furnishing, UsageStatus Usage, DeedStatus Deed, KitchenType Kitchen,
     bool Balcony, bool Elevator, bool Parking, bool InSite, bool LoanEligible, bool Swap,
-    PublicTag[] Tags, string Description, int ShowingCount);
+    PublicTag[] Tags, string Description, int ShowingCount, DateTime UpdatedAt);
 
 public record SiteInfo(string AdvisorName, string AdvisorPhone, string? WhatsappUrl);
 
@@ -36,7 +36,7 @@ public static class PublicMapper
         l.Heating, l.Furnishing, l.Usage, l.Deed, l.Kitchen,
         l.Balcony, l.Elevator, l.Parking, l.InSite, l.LoanEligible, l.Swap,
         l.Tags.OrderBy(t => t.Group).ThenBy(t => t.Name, StringComparer.CurrentCulture).Select(ToTag).ToArray(),
-        l.Description, showingCount);
+        l.Description, showingCount, l.UpdatedAt ?? l.CreatedAt);
 
     public static PublicTag ToTag(FeatureTag t) => new(t.Id, t.Name, t.Group);
 

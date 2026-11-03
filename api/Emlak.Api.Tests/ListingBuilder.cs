@@ -50,6 +50,7 @@ public class ListingBuilder
     public ListingBuilder WithOwner(string name, string phone, string? note = null) { _l.Owner = new Owner { Name = name, Phone = phone, Note = note }; return this; }
     public ListingBuilder WithTags(params FeatureTag[] tags) { _l.Tags = tags.ToList(); return this; }
     public ListingBuilder CreatedAt(DateTime utc) { _l.CreatedAt = utc; return this; }
+    public ListingBuilder UpdatedAt(DateTime utc) { _l.UpdatedAt = utc; return this; }
     public ListingBuilder Deleted() { _l.IsDeleted = true; _l.DeletedAt = DateTime.UtcNow; _l.DeletedBy = "admin1"; return this; }
     public ListingBuilder WithPhotos(params string[] paths)
     {
