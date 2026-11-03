@@ -39,9 +39,9 @@ public class ListingSearchService(AppDbContext db)
     }
 
     /// <summary>Verilen türün yalnızca aktif ilanlarından il, il→ilçeler ve oda sayısı seçenekleri.</summary>
-    public async Task<FilterOptions> GetFilterOptionsAsync(ListingType type, CancellationToken ct)
+    public async Task<FilterOptions> GetFilterOptionsAsync(ListingType? type, CancellationToken ct)
     {
-        var active = db.Listings.AsNoTracking().Where(l => l.Type == type && !l.IsDeleted);
+        var active = db.Listings.AsNoTracking().Where(l => (type == null || l.Type == type) && !l.IsDeleted);
 
         var cityDistricts = await active.Select(l => new { l.City, l.District }).Distinct().ToListAsync(ct);
         var cities = cityDistricts.Select(x => x.City).Distinct().OrderBy(c => c, StringComparer.OrdinalIgnoreCase).ToArray();

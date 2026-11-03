@@ -14,10 +14,9 @@ public static class PublicListingEndpoints
     {
         app.MapGet("/api/listings", async ([AsParameters] ListingQuery q, ListingSearchService search, CancellationToken ct) =>
         {
-            // Ziyaretçi yalnızca aktif ilanı görür, sahip aramasını kullanamaz; sayfa sınırları serviste taşmadan önce kıstırılır.
+            // Tür verilmezse iki tür birden listelenir. Ziyaretçi yalnızca aktif ilanı görür, sahip aramasını kullanamaz; sayfa sınırları serviste taşmadan önce kıstırılır.
             var safe = q with
             {
-                Type = q.Type ?? ListingType.Satilik,
                 Status = ListingStatus.Active,
                 OwnerText = null,
                 Page = Math.Clamp(q.Page, 1, MaxPage),
@@ -29,7 +28,7 @@ public static class PublicListingEndpoints
         }).AllowAnonymous();
 
         app.MapGet("/api/listings/filters", async ([FromQuery] ListingType? type, ListingSearchService search, CancellationToken ct)
-            => Results.Ok(await search.GetFilterOptionsAsync(type ?? ListingType.Satilik, ct))).AllowAnonymous();
+            => Results.Ok(await search.GetFilterOptionsAsync(type, ct))).AllowAnonymous();
 
         app.MapGet("/api/listings/{id:int}", async (int id, AppDbContext db, CancellationToken ct) =>
         {

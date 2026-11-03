@@ -11,7 +11,7 @@ public enum ListingStatus { Active, Deleted, All }
 /// <c>Status</c> ve <c>OwnerText</c> yalnızca yönetici uç noktalarının geçirmesi içindir; ziyaretçi uç noktaları Active'e zorlar.
 /// </summary>
 public record ListingQuery(
-    ListingType? Type = null, // null = tür filtresi yok (yalnızca yönetici/saha); ziyaretçi uç noktaları Satilik'e zorlar
+    ListingType? Type = null, // null = tür filtresi yok (yalnızca yönetici/saha); ziyaretçi uç noktalarında da iki tür birden gelir
     string? City = null,
     string? District = null,
     string? Neighborhood = null,

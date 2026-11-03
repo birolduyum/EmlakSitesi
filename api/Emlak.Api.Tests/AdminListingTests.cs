@@ -425,7 +425,7 @@ public class AdminListingTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
-    public async Task PublicList_WithoutType_StillReturnsOnlySatilik()
+    public async Task PublicList_WithoutType_ReturnsBothTypes()
     {
         await ResetAsync();
         await SeedAsync(new ListingBuilder().Titled("Satılık A"));
@@ -434,7 +434,7 @@ public class AdminListingTests : IClassFixture<ApiFactory>
         var body = await _factory.CreateClient().GetStringAsync("/api/listings");
 
         Assert.Contains("Satılık A", body);
-        Assert.DoesNotContain("Kiralık B", body);
+        Assert.Contains("Kiralık B", body);
     }
 
     [Fact]

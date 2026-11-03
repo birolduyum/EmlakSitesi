@@ -171,6 +171,21 @@ public class PublicApiTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task Filters_WithoutType_CountsBothTypes()
+    {
+        var client = await FreshClientAsync();
+        await SeedListingAsync(new ListingBuilder().In("Istanbul", "Kadikoy").WithRooms("3+1"));
+        await SeedListingAsync(new ListingBuilder().In("Izmir", "Konak").OfType(ListingType.Kiralik).WithRooms("3+1"));
+        await SeedListingAsync(new ListingBuilder().In("Bursa", "Nilufer").WithRooms("1+1").Deleted());
+
+        var f = await client.GetFromJsonAsync<JsonElement>("/api/listings/filters");
+
+        Assert.Equal(["Istanbul", "Izmir"], f.GetProperty("cities").EnumerateArray().Select(x => x.GetString()));
+        Assert.Equal(2, f.GetProperty("roomCounts").GetProperty("3+1").GetInt32());
+        Assert.False(f.GetProperty("roomCounts").TryGetProperty("1+1", out _));
+    }
+
+    [Fact]
     public async Task List_HugePage_DoesNotError()
     {
         var client = await FreshClientAsync();
