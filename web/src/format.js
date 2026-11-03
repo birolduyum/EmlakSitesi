@@ -34,6 +34,16 @@ export function formatDate(iso) {
   return `${dd}.${mm}.${d.getFullYear()}`
 }
 
+// Görüntüleyenin yerel saatine göre gün.ay.yıl SS:dd
+export function formatDateTime(iso) {
+  if (iso === null || iso === undefined || iso === '') return MISSING
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return MISSING
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mi = String(d.getMinutes()).padStart(2, '0')
+  return `${formatDate(iso)} ${hh}:${mi}`
+}
+
 export function formatFloor(floor) {
   const n = toNumber(floor)
   if (n === null) return MISSING
