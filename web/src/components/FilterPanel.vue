@@ -5,7 +5,9 @@ import { heatingLabels, furnishingLabels, typeLabels } from '../labels.js'
 
 const props = defineProps({
   modelValue: { type: Object, required: true },
-  filters: { type: Object, default: () => ({ cities: [], districtsByCity: {}, roomCounts: {} }) }
+  filters: { type: Object, default: () => ({ cities: [], districtsByCity: {}, roomCounts: {} }) },
+  // Yönetici modu: tür bölümüne "Hepsi" eklenir (seçilince type sorguda yer almaz).
+  allowAll: { type: Boolean, default: false }
 })
 const emit = defineEmits(['update:modelValue'])
 
@@ -102,7 +104,7 @@ function onTyped(key, event) {
 }
 
 function setType(type) {
-  emitWith({ type })
+  emitWith({ type: type || undefined })
 }
 function setCurrency(currency) {
   emitWith({ currency: currency || undefined })
@@ -131,6 +133,8 @@ function clearAll() {
   emit('update:modelValue', { type: props.modelValue.type })
 }
 
+const typeOptions = computed(() => [...(props.allowAll ? [['', 'Hepsi']] : []), ...Object.entries(typeLabels)])
+
 const districts = computed(() => {
   const city = props.modelValue.city
   return city ? props.filters.districtsByCity?.[city] ?? [] : []
@@ -147,17 +151,19 @@ const roomOptions = computed(() =>
   <form class="filters" aria-label="Filtreler" @submit.prevent>
     <fieldset class="segmented">
       <legend class="sr-only">İlan türü</legend>
-      <label v-for="(label, value) in typeLabels" :key="value" :class="{ on: modelValue.type === value }">
+      <label v-for="[value, label] in typeOptions" :key="value" :class="{ on: (modelValue.type ?? '') === value }">
         <input
           type="radio"
           name="type"
           :value="value"
-          :checked="modelValue.type === value"
+          :checked="(modelValue.type ?? '') === value"
           @change="setType(value)"
         />
         <span>{{ label }}</span>
       </label>
     </fieldset>
+
+    <slot name="extra"></slot>
 
     <div class="group">
       <label class="field">
@@ -349,7 +355,8 @@ legend small {
 }
 .segmented {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   border: 1px solid var(--green-700);
   border-radius: var(--radius);
   overflow: hidden;

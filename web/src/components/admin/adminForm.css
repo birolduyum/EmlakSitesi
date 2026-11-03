@@ -1,0 +1,142 @@
+/* İlan formu ve yönetim sayfalarının ortak görünümü (af- öneki: ziyaretçi sayfalarıyla çakışmasın). */
+.af-section {
+  margin: 0 0 1rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+}
+.af-section > h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.125rem;
+}
+.af-section > .af-note {
+  margin: -0.25rem 0 0.75rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+.af-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  gap: 0.75rem 1rem;
+}
+.af-grid .af-wide {
+  grid-column: 1 / -1;
+}
+.af-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+.af-field > label,
+.af-field > .af-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--green-900);
+}
+.af-field input,
+.af-field select,
+.af-field textarea {
+  width: 100%;
+}
+.af-field [aria-invalid='true'] {
+  border-color: var(--danger);
+}
+.af-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.875rem;
+}
+.af-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+fieldset.af-plain {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+fieldset.af-plain > legend {
+  padding: 0;
+  margin-bottom: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--green-900);
+}
+.af-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.af-checks legend {
+  padding: 0;
+  margin-bottom: 0.375rem;
+  font-weight: 600;
+  color: var(--green-900);
+}
+.af-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  cursor: pointer;
+}
+.af-segmented {
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  border: 1px solid var(--green-700);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.af-segmented label {
+  position: relative;
+  padding: 0.5rem 1.25rem;
+  text-align: center;
+  font-weight: 600;
+  color: var(--green-700);
+  background: #fff;
+  cursor: pointer;
+}
+.af-segmented label.on {
+  background: var(--green-700);
+  color: #fff;
+}
+.af-segmented input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  width: 100%;
+  cursor: pointer;
+}
+.af-segmented label:focus-within {
+  outline: 2px solid var(--green-600);
+  outline-offset: -4px;
+}
+.af-field input:focus-visible,
+.af-field select:focus-visible,
+.af-field textarea:focus-visible {
+  outline: 2px solid var(--green-600);
+  outline-offset: 1px;
+}
+button.danger {
+  border-color: var(--danger);
+  background: var(--danger);
+}
+button.danger:hover {
+  background: #7f1d1d;
+}
+.af-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

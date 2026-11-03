@@ -2,20 +2,30 @@
 import { computed } from 'vue'
 import PhotoStrip from './PhotoStrip.vue'
 import AdvisorBox from './AdvisorBox.vue'
-import { formatPrice, specLine } from '../format.js'
+import { formatPrice, formatDate, specLine } from '../format.js'
 
 const props = defineProps({
-  listing: { type: Object, required: true }
+  listing: { type: Object, required: true },
+  // Yönetici listesi: satırın gideceği adres, silinmiş görünümü ve danışman kutusunun yerine geçen eylemler (slot `actions`).
+  linkTo: { type: String, default: null },
+  deleted: { type: Boolean, default: false },
+  showAdvisor: { type: Boolean, default: true }
 })
 
-const to = computed(() => `/ilan/${props.listing.id}`)
+const to = computed(() => props.linkTo ?? `/ilan/${props.listing.id}`)
+const deletedText = computed(() => {
+  const l = props.listing
+  const by = l.deletedBy ? ` — ${l.deletedBy}` : ''
+  const at = l.deletedAt ? `${l.deletedBy ? ',' : ' —'} ${formatDate(l.deletedAt)}` : ''
+  return `Silindi${by}${at}`
+})
 const price = computed(() => formatPrice(props.listing.price, props.listing.currency, props.listing.type))
 const spec = computed(() => specLine(props.listing))
 const location = computed(() => [props.listing.city, props.listing.district].filter(Boolean).join(', '))
 </script>
 
 <template>
-  <article class="row">
+  <article class="row" :class="{ deleted }">
     <div class="photo">
       <PhotoStrip :photos="listing.photoUrls ?? []" :alt="listing.title" :to="to" />
       <span v-if="listing.badge" class="badge" data-testid="badge">{{ listing.badge }}</span>
@@ -24,12 +34,14 @@ const location = computed(() => [props.listing.city, props.listing.district].fil
       <h2 class="title">
         <router-link :to="to" class="stretched">{{ listing.title }}</router-link>
       </h2>
+      <p v-if="deleted" class="deleted-tag" data-testid="deleted-tag">{{ deletedText }}</p>
       <p class="location">{{ location }}</p>
       <p class="spec">{{ spec }}</p>
+      <slot name="meta"></slot>
       <p class="price">{{ price }}</p>
     </div>
-    <div class="side">
-      <AdvisorBox />
+    <div v-if="$slots.actions || showAdvisor" class="side">
+      <slot name="actions"><AdvisorBox /></slot>
     </div>
   </article>
 </template>
@@ -106,6 +118,18 @@ const location = computed(() => [props.listing.city, props.listing.district].fil
 .row:has(.stretched:focus-visible) {
   outline: 2px solid var(--green-600);
   outline-offset: 2px;
+}
+.row.deleted {
+  background: #f9fafb;
+}
+.row.deleted .photo,
+.row.deleted .body {
+  opacity: 0.6;
+}
+.deleted-tag {
+  color: var(--danger);
+  font-weight: 600;
+  font-size: 0.875rem;
 }
 .location {
   color: var(--muted);

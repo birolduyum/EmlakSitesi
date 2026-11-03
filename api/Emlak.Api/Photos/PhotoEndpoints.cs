@@ -132,7 +132,7 @@ public static class PhotoEndpoints
         foreach (var p in photos.OrderBy(p => p.SortOrder).ThenBy(p => p.Id)) { p.SortOrder = i++; }
     }
 
-    private static PhotoDto ToDto(Photo p) => new(p.Id, "/photos/" + p.FilePath, p.SortOrder);
+    private static PhotoDto ToDto(Photo p) => new(p.Id, PhotoUrl.For(p.FilePath), p.SortOrder);
 
     private static IResult BadRequest(string[] errors) => Results.BadRequest(new { errors });
 }

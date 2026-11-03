@@ -42,6 +42,6 @@ public static class PublicMapper
 
     public static string[] PhotoUrls(Listing l)
         => l.Photos.OrderBy(p => p.SortOrder).ThenBy(p => p.Id)
-            .Select(p => "/photos/" + p.FilePath.Replace('\\', '/').TrimStart('/'))
+            .Select(p => Emlak.Api.Photos.PhotoUrl.For(p.FilePath))
             .ToArray();
 }

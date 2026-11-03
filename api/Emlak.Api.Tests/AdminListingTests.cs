@@ -255,6 +255,40 @@ public class AdminListingTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task AdminDetail_AsAdmin_HasPhotosWithIds()
+    {
+        await ResetAsync();
+        var l = await SeedAsync(Secret(new ListingBuilder().WithPhotos("9/b.jpg", "9/a.png")));
+        var admin = await _factory.LoginAsync("admin1");
+
+        var res = await admin.GetAsync($"/api/admin/listings/{l.Id}");
+
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+        var photos = JsonDocument.Parse(await res.Content.ReadAsStringAsync()).RootElement.GetProperty("photos").EnumerateArray().ToList();
+        Assert.Equal(2, photos.Count);
+        Assert.Equal(new[] { 0, 1 }, photos.Select(p => p.GetProperty("sortOrder").GetInt32()));
+        Assert.Equal(new[] { "/photos/9/b.jpg", "/photos/9/a.png" }, photos.Select(p => p.GetProperty("url").GetString()));
+        Assert.Equal(l.Photos.OrderBy(p => p.SortOrder).Select(p => p.Id), photos.Select(p => p.GetProperty("id").GetInt32()));
+    }
+
+    [Fact]
+    public async Task AdminDetail_AsField_HasNoPhotoIdsOrOwner()
+    {
+        await ResetAsync();
+        var l = await SeedAsync(Secret(new ListingBuilder().WithPhotos("9/b.jpg")));
+        var field = await _factory.LoginAsync("saha1");
+
+        var res = await field.GetAsync($"/api/admin/listings/{l.Id}");
+
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+        var body = await res.Content.ReadAsStringAsync();
+        AssertNoOwnerData(body);
+        var root = JsonDocument.Parse(body).RootElement;
+        Assert.False(root.TryGetProperty("photos", out _));
+        Assert.Equal("/photos/9/b.jpg", root.GetProperty("photoUrls")[0].GetString());
+    }
+
+    [Fact]
     public async Task AdminDetail_IncludesDeleted_ForAdmin_But404ForField()
     {
         await ResetAsync();

@@ -1,4 +1,5 @@
 using Emlak.Api.Domain;
+using Emlak.Api.Photos;
 
 namespace Emlak.Api.Listings;
 
@@ -21,7 +22,8 @@ public record AdminListingDetail(
     PublicTag[] Tags, string Description, int ShowingCount,
     AdminOwner Owner,
     string CreatedBy, DateTime? UpdatedAt, string? UpdatedBy,
-    bool IsDeleted, DateTime? DeletedAt, string? DeletedBy, DateTime? RestoredAt, string? RestoredBy);
+    bool IsDeleted, DateTime? DeletedAt, string? DeletedBy, DateTime? RestoredAt, string? RestoredBy,
+    PhotoDto[] Photos);
 
 /// <summary>Oluşturma/güncelleme gövdesi. Alanlar boş bırakılabilir; eksikler <see cref="ListingValidator"/> ile 400 olur.</summary>
 public record AdminListingInput
@@ -83,6 +85,9 @@ public static class AdminMapper
             p.Tags, p.Description, p.ShowingCount,
             ToOwner(l.Owner),
             l.CreatedBy, l.UpdatedAt, l.UpdatedBy,
-            l.IsDeleted, l.DeletedAt, l.DeletedBy, l.RestoredAt, l.RestoredBy);
+            l.IsDeleted, l.DeletedAt, l.DeletedBy, l.RestoredAt, l.RestoredBy,
+            // Yönetici fotoğraf yönetimi için kimlikli liste (ziyaretçi cevabında yalnızca adresler vardır).
+            l.Photos.OrderBy(x => x.SortOrder).ThenBy(x => x.Id)
+                .Select(x => new PhotoDto(x.Id, PhotoUrl.For(x.FilePath), x.SortOrder)).ToArray());
     }
 }

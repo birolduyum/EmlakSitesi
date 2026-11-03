@@ -1,4 +1,4 @@
-import { heatingLabels, furnishingLabels, currencyLabels, sortLabels, typeLabels } from './labels.js'
+import { heatingLabels, furnishingLabels, currencyLabels, sortLabels, typeLabels, statusLabels } from './labels.js'
 
 export const PAGE_SIZE = 20
 
@@ -43,9 +43,12 @@ function parseRooms(value) {
 }
 
 // Ham değerleri (URL dizgeleri ya da yazılı değerler) API parametrelerine çevirir; bilinmeyen anahtarlar düşer.
-function normalize(raw) {
+function normalize(raw, admin = false) {
   const out = {}
-  out.type = parseEnum(raw.type, typeLabels) ?? 'Satilik'
+  // Ziyaretçi listesinde tür her zaman vardır (varsayılan Satılık); yönetici listesinde yoksa iki tür birden gelir.
+  const type = parseEnum(raw.type, typeLabels)
+  if (type) out.type = type
+  else if (!admin) out.type = 'Satilik'
   const page = parseNumber(raw.page, { integer: true })
   out.page = page && page >= 1 ? page : 1
   out.pageSize = PAGE_SIZE
@@ -76,6 +79,12 @@ function normalize(raw) {
   }
   const sort = parseEnum(raw.sort, sortLabels)
   if (sort && sort !== 'Newest') out.sort = sort
+  if (admin) {
+    const status = parseEnum(raw.status, statusLabels)
+    if (status && status !== 'Active') out.status = status
+    const ownerText = parseText(raw.ownerText)
+    if (ownerText !== undefined) out.ownerText = ownerText
+  }
   return out
 }
 
@@ -85,13 +94,25 @@ export function routeQueryToParams(query) {
 
 // API parametreleri → URL sorgusu (yalnızca varsayılandan farklı olanlar yazılır).
 export function paramsToRouteQuery(params) {
-  const p = normalize(params ?? {})
+  return toRouteQuery(normalize(params ?? {}), false)
+}
+
+function toRouteQuery(p, admin) {
   const q = {}
   for (const [key, value] of Object.entries(p)) {
     if (key === 'pageSize') continue
-    if (key === 'type' && value === 'Satilik') continue
+    if (!admin && key === 'type' && value === 'Satilik') continue
     if (key === 'page' && value === 1) continue
     q[key] = Array.isArray(value) ? value.slice() : String(value)
   }
   return q
+}
+
+// Yönetici listesi: tür yoksa iki tür birden; ek süzgeçler status (Aktif/Silinenler/Hepsi) ve ownerText.
+export function adminRouteQueryToParams(query) {
+  return normalize(query ?? {}, true)
+}
+
+export function adminParamsToRouteQuery(params) {
+  return toRouteQuery(normalize(params ?? {}, true), true)
 }

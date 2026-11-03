@@ -65,3 +65,15 @@ export const tagGroupLabels = {
 export const presence = (v) => (v ? 'Var' : 'Yok')
 export const eligibility = (v) => (v ? 'Uygun' : 'Değil')
 export const yesNo = (v) => (v ? 'Evet' : 'Hayır')
+
+// Yönetici listesindeki durum süzgeci (API: status = Active | Deleted | All)
+export const statusLabels = {
+  Active: 'Aktif',
+  Deleted: 'Silinenler',
+  All: 'Hepsi'
+}
+
+export const roleLabels = {
+  Admin: 'Yönetici',
+  Field: 'Saha'
+}
